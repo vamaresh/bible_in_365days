@@ -1,8 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+// Mock window.matchMedia to be undefined for testing
+delete global.window.matchMedia;
+
+// Mock window.navigator.standalone
+global.navigator.standalone = false;
+
+test('renders bible challenge app', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  const loadingElement = screen.getByText(/Loading/i);
+  expect(loadingElement).toBeInTheDocument();
 });

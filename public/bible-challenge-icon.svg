@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6b4eff" />
+      <stop offset="100%" stop-color="#2fb6ff" />
+    </linearGradient>
+    <linearGradient id="pages" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#f3f4ff" stop-opacity="0.98" />
+    </linearGradient>
+    <linearGradient id="bookmark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff8b3d" />
+      <stop offset="100%" stop-color="#ff6358" />
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)" />
+  <g transform="translate(40 52)">
+    <path d="M88 20c24 0 44 8 72 24v92c-28-16-48-24-72-24s-44 8-72 24V44c28-16 48-24 72-24Z" fill="#221b52" opacity="0.18" />
+    <path d="M88 16c24 0 44 8 72 24v92c-28-16-48-24-72-24s-44 8-72 24V40c28-16 48-24 72-24Z" fill="url(#pages)" />
+    <path d="M88 16v92c-24 0-44 8-72 24V40c28-16 48-24 72-24Z" fill="#ffffff" opacity="0.65" />
+    <path d="M84 34c2.4-1.2 5.6-1.2 8 0l20 10c2.4 1.2 2.4 4.4 0 5.6L92 60c-2.4 1.2-5.6 1.2-8 0L64 49.6c-2.4-1.2-2.4-4.4 0-5.6L84 34Z" fill="#6952ff" opacity="0.45" />
+    <path d="M112 16v88l24 12V28c0-3.6-2.4-6.9-5.8-7.9l-18.2-5.4Z" fill="url(#bookmark)" />
+    <circle cx="88" cy="88" r="22" fill="#4c35e6" opacity="0.18" />
+    <path d="M 72 88c0-8.84 7.16-16 16-16s16 7.16 16 16-7.16 16-16 16S72 96.84 72 88Zm16-8c-2.2 0-4 1.8-4 4v22.6c0 2.21 1.79 4 4 4s4-1.79 4-4V84c0-2.2-1.8-4-4-4Z" fill="#4c35e6" />
+  </g>
+</svg>

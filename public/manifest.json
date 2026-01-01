@@ -1,11 +1,13 @@
 {
   "short_name": "Bible Challenge",
   "name": "Bible Challenge 2026",
+  "description": "Read through scripture together, track your progress, and encourage your community.",
   "icons": [
     {
       "src": "bible-challenge-icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
       "src": "favicon.ico",
@@ -15,26 +17,32 @@
     {
       "src": "apple-touch-icon.png",
       "type": "image/png",
-      "sizes": "180x180"
+      "sizes": "180x180",
+      "purpose": "any maskable"
     },
     {
       "src": "apple-touch-icon-152.png",
       "type": "image/png",
-      "sizes": "152x152"
+      "sizes": "152x152",
+      "purpose": "any maskable"
     },
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
-}
+  "orientation": "portrait",
+  "theme_color": "#4c35e6",
+  "background_color": "#ffffff",
+  "scope": "/",
+  "categories": ["lifestyle", "education", "books"]

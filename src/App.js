@@ -2268,9 +2268,9 @@ function App() {
                       key={badge.label}
                       className={`border-2 rounded-2xl p-3 flex flex-col gap-1 ${
                         badge.earned ? 'border-green-200 bg-green-50 text-green-800' : 'border-gray-100 bg-gray-50 text-gray-500'
-                      } ${isHighlighted ? 'animate-bounce shadow-lg' : ''}`}
+                      } ${isHighlighted ? 'milestone-celebrate milestone-glow' : ''}`}
                     >
-                      <span className="text-2xl">{badge.icon}</span>
+                      <span className={`text-2xl ${isHighlighted ? 'inline-block' : ''}`}>{badge.icon}</span>
                       <p className="font-semibold text-gray-800">{badge.label}</p>
                       <p className="text-xs">{badge.description}</p>
                       <p className="text-[11px] text-gray-400">{badge.threshold}%</p>

@@ -1393,7 +1393,6 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [showSettings, setShowSettings] = useState(false);
   const [reminderTime, setReminderTime] = useState('07:00');
   const [dailyVerse, setDailyVerse] = useState('');
   const [loading, setLoading] = useState(true);
@@ -1776,7 +1775,6 @@ function App() {
       localStorage.removeItem(USER_STORAGE_KEY);
       localStorage.removeItem(LEGACY_STORAGE_KEY);
       setCurrentUser('');
-      setShowSettings(false);
       setView('login');
     } catch (error) {
       console.error('Error deleting account:', error);
@@ -1983,7 +1981,19 @@ function App() {
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${currentTheme.bg} pb-20`}>
-      <div className={`bg-gradient-to-r ${currentTheme.primary} text-white p-6 rounded-b-3xl shadow-lg mb-4`}>
+      {(view === 'calendar' || view === 'day-detail' || view === 'community' || view === 'profile') && (
+        <div className={`bg-gradient-to-r ${currentTheme.primary} text-white p-4 rounded-b-3xl shadow-lg mb-4`}>
+          <div className="text-center">
+            <img src={ICON_SRC} alt="Bible Challenge icon" className="w-10 h-10 mx-auto mb-1 drop-shadow-md" />
+            <h1 className="text-base font-bold opacity-90">{t('appTitle')}</h1>
+            <p className="text-xs opacity-75">Global 2026 Plan</p>
+          </div>
+        </div>
+      )}
+      
+      {view === 'home' && (
+        <>
+          <div className={`bg-gradient-to-r ${currentTheme.primary} text-white p-6 rounded-b-3xl shadow-lg mb-4`}>
         <div className="text-center mb-3">
           <img src={ICON_SRC} alt="Bible Challenge icon" className="w-12 h-12 mx-auto mb-2 drop-shadow-md" />
           <h1 className="text-lg font-bold opacity-90">{t('appTitle')}</h1>
@@ -2073,15 +2083,17 @@ function App() {
         </div>
       )}
 
-      <div className="px-4 space-y-4">
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl p-6 shadow-md border-2 border-amber-200">
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl p-6 shadow-md border-2 border-amber-200 mx-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="text-amber-600" size={20} />
             <h3 className="font-bold text-amber-900">{t('verseOfTheDay')}</h3>
           </div>
           <p className="text-amber-800 italic">{dailyVerse}</p>
         </div>
+        </>
+      )}
 
+      <div className="px-4 space-y-4">
         {view === 'home' && (
           <>
             <div className="bg-white rounded-3xl shadow-lg p-6">
@@ -2474,8 +2486,8 @@ function App() {
       <span className="text-xs font-semibold">Community</span>
     </button>
     <button
-      onClick={() => setShowSettings(true)}
-      className={`flex flex-col items-center gap-1 ${showSettings ? 'text-purple-600' : 'text-gray-400'}`}
+      onClick={() => setView('profile')}
+      className={`flex flex-col items-center gap-1 ${view === 'profile' ? 'text-purple-600' : 'text-gray-400'}`}
     >
       <User size={24} />
       <span className="text-xs font-semibold">Profile</span>
@@ -2491,21 +2503,13 @@ function App() {
     <Share2 size={24} />
   </button>
 
-  {showSettings && (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <User className="text-purple-600" />
-            Profile & Settings
-          </h2>
-          <button
-            onClick={() => setShowSettings(false)}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
-          >
-            ✕
-          </button>
-        </div>
+  {view === 'profile' && (
+    <div className="px-4 space-y-4">
+      <div className="bg-white rounded-3xl shadow-lg p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+          <User className="text-purple-600" />
+          Profile & Settings
+        </h2>
         
         {(currentUser === 'Amar' || currentUser === 'Amaresh') && (
           <div className="mb-6">

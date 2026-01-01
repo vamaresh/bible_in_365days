@@ -1399,6 +1399,7 @@ function App() {
   const [extraChaptersInput, setExtraChaptersInput] = useState('');
   const [removeExtraChaptersInput, setRemoveExtraChaptersInput] = useState('');
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [isInstallable, setIsInstallable] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [announcementInput, setAnnouncementInput] = useState('');
@@ -1430,10 +1431,25 @@ function App() {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
+      setIsInstallable(true);
       setShowInstallPrompt(true);
     };
 
+    // Check if app is already installed
+    const checkIfInstalled = () => {
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        // App is already installed
+        setIsInstallable(false);
+      } else if ('standalone' in window.navigator && window.navigator.standalone) {
+        // iOS standalone mode
+        setIsInstallable(false);
+      } else {
+        setIsInstallable(true);
+      }
+    };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    checkIfInstalled();
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -2684,11 +2700,55 @@ function App() {
 
         <div className="p-4 bg-green-50 rounded-2xl">
           <h4 className="text-sm font-bold text-green-800 mb-2">📱 Install as App</h4>
-          <div className="text-sm text-green-700 space-y-1">
-            <p><strong>Android:</strong> Menu (⋮) → "Add to Home screen"</p>
-            <p><strong>iPhone:</strong> Share → "Add to Home Screen"</p>
-            <p className="text-xs mt-2">Get offline access and push notifications!</p>
-          </div>
+          <p className="text-xs text-green-700 mb-3">
+            Get offline access and push notifications!
+          </p>
+          {isInstallable ? (
+            <button
+              onClick={async () => {
+                if (deferredPrompt) {
+                  // Direct install available (Chrome/Edge on Android)
+                  deferredPrompt.prompt();
+                  const { outcome } = await deferredPrompt.userChoice;
+                  if (outcome === 'accepted') {
+                    alert('✅ App installed successfully!');
+                    setIsInstallable(false);
+                  } else {
+                    alert('Installation cancelled. You can try again anytime!');
+                  }
+                  setDeferredPrompt(null);
+                } else {
+                  // Try to trigger install or show instructions
+                  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                  const isAndroid = /Android/.test(navigator.userAgent);
+
+                  if (isIOS) {
+                    // iOS - can't install programmatically, show instructions
+                    if (window.confirm('📱 To install on iPhone/iPad:\n\n1. Tap the Share button (square with arrow) below\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" in the top right\n\nWould you like me to show you where the Share button is?')) {
+                      alert('Look for the square with an arrow pointing up - it\'s usually at the bottom or top of your screen!');
+                    }
+                  } else if (isAndroid) {
+                    // Android - try to find install option or show instructions
+                    if (window.confirm('📱 To install on Android:\n\n1. Tap the menu (⋮) in the top right\n2. Look for "Add to Home screen" or "Install app"\n3. Tap "Install"\n\nWould you like to try opening the browser menu now?')) {
+                      // Can't programmatically open browser menu, so just show encouragement
+                      alert('Great! Look for the ⋮ menu in your browser and find the install option!');
+                    }
+                  } else {
+                    // Desktop or other browsers
+                    alert('📱 To install:\n\n• Chrome: Click the install icon in the address bar or menu (⋮) → Install\n• Edge: Menu (•••) → Apps → Install this site as an app\n• Safari (iPhone): Share → Add to Home Screen');
+                  }
+                }
+              }}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-2.5 rounded-xl font-semibold hover:from-green-600 hover:to-emerald-600 transition shadow text-sm"
+            >
+              {deferredPrompt ? 'Install Bible Challenge' : 'Install App'}
+            </button>
+          ) : (
+            <div className="text-center py-2">
+              <p className="text-sm text-green-700 font-semibold">✅ App is installed!</p>
+              <p className="text-xs text-green-600 mt-1">You can launch it from your home screen</p>
+            </div>
+          )}
         </div>
 
         <div className="mb-6 space-y-4">

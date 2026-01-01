@@ -1399,6 +1399,7 @@ function App() {
   const [extraChaptersInput, setExtraChaptersInput] = useState('');
   const [removeExtraChaptersInput, setRemoveExtraChaptersInput] = useState('');
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [announcementInput, setAnnouncementInput] = useState('');
   const [theme, setTheme] = useState('purple-blue'); // Default theme
@@ -1424,6 +1425,19 @@ function App() {
       // Show install prompt after a delay
       setTimeout(() => setShowInstallPrompt(true), 3000);
     }
+
+    // Capture the beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallPrompt(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, [language]);
 
   const loadData = () => {
@@ -2659,30 +2673,40 @@ function App() {
             Get offline access and push notifications!
           </p>
           <button
-            onClick={() => {
-              const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-              const isAndroid = /Android/.test(navigator.userAgent);
-              const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-              const isEdge = /Edg/.test(navigator.userAgent);
-              const isSamsung = /SamsungBrowser/.test(navigator.userAgent);
-
-              if (isIOS) {
-                alert('📱 How to install on iPhone/iPad:\n\n1. Tap the Share button (square with arrow pointing up) at the bottom of your screen\n2. Scroll down in the share menu\n3. Tap "Add to Home Screen"\n4. Tap "Add" in the top right corner\n\nThe app will appear on your home screen like a native app!');
-              } else if (isAndroid) {
-                if (isChrome) {
-                  alert('📱 How to install on Android Chrome:\n\n1. Look for the "Install" icon in your address bar (it looks like a computer monitor with a down arrow)\n2. Tap the "Install" icon\n3. Tap "Install" in the popup\n\nIf you don\'t see the icon, tap the ⋮ menu → "Add to Home screen"');
-                } else if (isSamsung) {
-                  alert('📱 How to install on Samsung Internet:\n\n1. Tap the ⋮ menu in the top right\n2. Tap "Add to Home screen"\n3. Tap "Add" to confirm\n\nThe app will appear on your home screen!');
-                } else {
-                  alert('📱 How to install on Android:\n\n1. Tap the ⋮ menu in the top right\n2. Look for "Add to Home screen" or "Install app"\n3. Tap it and follow the prompts\n\nThe app will appear on your home screen like a native app!');
+            onClick={async () => {
+              // Try to use the native install prompt first
+              if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                  console.log('User accepted the install prompt');
                 }
+                setDeferredPrompt(null);
               } else {
-                alert('📱 How to install this app:\n\n• Chrome: Look for "Install" icon in address bar or ⋮ menu → Install\n• Edge: ⋮ menu → Apps → Install this site as an app\n• Safari (iPhone): Share button → Add to Home Screen\n• Firefox: ⋮ menu → Install This Site as an App\n\nTry refreshing the page if you don\'t see the option!');
+                // Fall back to showing instructions
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                const isAndroid = /Android/.test(navigator.userAgent);
+                const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+                const isSamsung = /SamsungBrowser/.test(navigator.userAgent);
+
+                if (isIOS) {
+                  alert('📱 How to install on iPhone/iPad:\n\n1. Tap the Share button (square with arrow pointing up) at the bottom of your screen\n2. Scroll down in the share menu\n3. Tap "Add to Home Screen"\n4. Tap "Add" in the top right corner\n\nThe app will appear on your home screen like a native app!');
+                } else if (isAndroid) {
+                  if (isChrome) {
+                    alert('📱 How to install on Android Chrome:\n\n1. Look for the "Install" icon in your address bar (it looks like a computer monitor with a down arrow)\n2. Tap the "Install" icon\n3. Tap "Install" in the popup\n\nIf you don\'t see the icon, tap the ⋮ menu → "Add to Home screen"');
+                  } else if (isSamsung) {
+                    alert('📱 How to install on Samsung Internet:\n\n1. Tap the ⋮ menu in the top right\n2. Tap "Add to Home screen"\n3. Tap "Add" to confirm\n\nThe app will appear on your home screen!');
+                  } else {
+                    alert('📱 How to install on Android:\n\n1. Tap the ⋮ menu in the top right\n2. Look for "Add to Home screen" or "Install app"\n3. Tap it and follow the prompts\n\nThe app will appear on your home screen like a native app!');
+                  }
+                } else {
+                  alert('📱 How to install this app:\n\n• Chrome: Look for "Install" icon in address bar or ⋮ menu → Install\n• Edge: ⋮ menu → Apps → Install this site as an app\n• Safari (iPhone): Share button → Add to Home Screen\n• Firefox: ⋮ menu → Install This Site as an App\n\nTry refreshing the page if you don\'t see the option!');
+                }
               }
             }}
             className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-2.5 rounded-xl font-semibold hover:from-green-600 hover:to-emerald-600 transition shadow text-sm"
           >
-            How to Install App
+            {deferredPrompt ? 'Install App' : 'How to Install App'}
           </button>
         </div>
 

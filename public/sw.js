@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-challenge-v5';
+const CACHE_NAME = 'bible-challenge-v6';
 const urlsToCache = [
   '/',
   '/manifest.json',
@@ -47,6 +47,28 @@ self.addEventListener('fetch', (event) => {
   // Only cache GET requests
   if (event.request.method !== 'GET') return;
 
+  // For JS/CSS files, use network-first strategy
+  if (event.request.url.includes('/static/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Clone and cache the new version
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache if network fails
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // For other requests, use cache-first strategy
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

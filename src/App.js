@@ -2864,6 +2864,34 @@ function App() {
                 try {
                   const snapshot = await get(userRef);
                   const userData = snapshot.val() || {};
+                  const completedDates = userData.completedDates || [];
+                  const extraChapters = userData.extraChapters || 0;
+                  
+                  // Calculate from completed dates (4 chapters per day)
+                  const totalFromDates = completedDates.length * 4;
+                  const newTotal = totalFromDates + extraChapters;
+                  
+                  await update(userRef, {
+                    totalChapters: newTotal
+                  });
+                  
+                  alert(`✅ Recovered! Your chapter count is now ${newTotal} (${completedDates.length} days × 4 chapters + ${extraChapters} bonus)`);
+                } catch (error) {
+                  console.error('Error recovering:', error);
+                  alert('❌ Failed to recover. Please try again.');
+                }
+              }}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-2.5 rounded-xl font-semibold hover:from-green-600 hover:to-emerald-600 transition shadow text-sm"
+            >
+              🔄 Recover from Completed Days
+            </button>
+            
+            <button
+              onClick={async () => {
+                const userRef = ref(database, `users/${currentUser}`);
+                try {
+                  const snapshot = await get(userRef);
+                  const userData = snapshot.val() || {};
                   const chaptersData = userData.completedChapters || {};
                   
                   // Calculate total from completed chapters

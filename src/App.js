@@ -1897,7 +1897,7 @@ function App() {
   const todayDayNumber = getDayNumber(planToday);
   const todayCompleted = isDateCompleted(planToday, currentUser);
   const todayReading = getReadingForDay(todayDayNumber, language);
-  const progressPercent = Math.round(getProgress(currentUser));
+  const progressPercent = (Math.round(getProgress(currentUser) * 10) / 10).toFixed(1);
   const milestoneBadges = MILESTONE_BADGES.map((badge) => ({
     ...badge,
     earned: progressPercent >= badge.threshold
@@ -2240,7 +2240,7 @@ function App() {
         </div>
         <div className="space-y-3">
           {[...users].sort((a, b) => (b.completedDates?.length || 0) - (a.completedDates?.length || 0)).map((user, idx) => {
-            const userProgress = Math.round(getProgress(user.id));
+            const userProgress = (Math.round(getProgress(user.id) * 10) / 10).toFixed(1);
             const badgeLabel = getCommunityBadgeLabel(userProgress);
             return (
               <div key={user.id} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 border-2 border-purple-100">

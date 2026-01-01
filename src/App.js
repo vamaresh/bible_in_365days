@@ -2011,7 +2011,7 @@ function App() {
                 </span>
               )}
             </div>
-            <p className="text-purple-600 text-sm">{t('dayOfTotal', { day: todayDayNumber, total: TOTAL_DAYS })}</p>
+            <p className="text-white opacity-90 text-sm">{t('dayOfTotal', { day: todayDayNumber, total: TOTAL_DAYS })}</p>
             {!hasPlanStarted && (
               <p className="text-purple-200 text-xs mt-1">
                 {t('planBeginsIn', { 
@@ -2384,18 +2384,31 @@ function App() {
             </h2>
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4 mb-4">
               <p className="text-sm text-gray-600 mb-2 font-semibold">Day {detailDayNumber} Reading:</p>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {detailReading.map(({ book, chapter }, idx) => (
-                  <a
-                    key={`${book}-${chapter}-${idx}`}
-                    href={getBibleGatewayLink(book, chapter, language)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-blue-200 text-blue-800 px-3 py-2 rounded-full text-sm font-semibold hover:bg-blue-300 transition"
-                  >
-                    {`${book} ${chapter}`}
-                  </a>
-                ))}
+              <div className="space-y-2 mb-4">
+                {detailReading.map(({ book, chapter }, idx) => {
+                  const dateStr = selectedDate.toISOString().split('T')[0];
+                  const chapterKey = `${book} ${chapter}`;
+                  const isCompleted = (completedChapters && completedChapters[dateStr]) ? completedChapters[dateStr].includes(chapterKey) : false;
+                  
+                  return (
+                    <div key={`${book}-${chapter}-${idx}`} className="flex items-center gap-3 bg-white rounded-xl p-3 border-2 border-blue-100">
+                      <input
+                        type="checkbox"
+                        checked={isCompleted}
+                        onChange={() => toggleChapter(selectedDate, book, chapter)}
+                        className="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+                      />
+                      <a
+                        href={getBibleGatewayLink(book, chapter, language)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 text-blue-800 font-semibold hover:text-blue-900 transition"
+                      >
+                        {chapterKey}
+                      </a>
+                    </div>
+                  );
+                })}
               </div>
               {!isDateCompleted(selectedDate, currentUser) ? (
                 <button

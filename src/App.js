@@ -1407,6 +1407,7 @@ function App() {
   const [language, setLanguage] = useState('en'); // Default language
   const [completedChapters, setCompletedChapters] = useState({}); // { 'date': ['Book Chapter', ...] }
   const [showCatchUp, setShowCatchUp] = useState(false);
+  const [showAdminTools, setShowAdminTools] = useState(false);
 
   // Translation hook
   const { t } = useTranslation(language);
@@ -2507,24 +2508,104 @@ function App() {
         </div>
         
         {(currentUser === 'Amar' || currentUser === 'Amaresh') && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border-2 border-blue-200">
-            <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
-              <Globe size={16} />
-              📢 Send Announcement (Admin Only)
-            </h3>
-            <textarea
-              value={announcementInput}
-              onChange={(e) => setAnnouncementInput(e.target.value)}
-              placeholder="Type your announcement message here..."
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-purple-500 focus:outline-none text-sm mb-3 min-h-[100px]"
-            />
+          <div className="mb-6">
             <button
-              onClick={sendAnnouncement}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-2xl font-semibold hover:from-blue-600 hover:to-purple-600 transition shadow flex items-center justify-center gap-2"
+              onClick={() => setShowAdminTools(!showAdminTools)}
+              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-2xl font-bold hover:from-indigo-600 hover:to-purple-700 transition shadow-lg flex items-center justify-center gap-2"
             >
-              <Send size={16} />
-              Send to Everyone
+              <Globe size={18} />
+              🔐 Admin Tools
+              <span className="text-sm">{showAdminTools ? '▲' : '▼'}</span>
             </button>
+            
+            {showAdminTools && (
+              <div className="mt-4 space-y-4">
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border-2 border-blue-200">
+                  <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
+                    <Send size={16} />
+                    📢 Send Announcement
+                  </h3>
+                  <textarea
+                    value={announcementInput}
+                    onChange={(e) => setAnnouncementInput(e.target.value)}
+                    placeholder="Type your announcement message here..."
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-purple-500 focus:outline-none text-sm mb-3 min-h-[100px]"
+                  />
+                  <button
+                    onClick={sendAnnouncement}
+                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-2xl font-semibold hover:from-blue-600 hover:to-purple-600 transition shadow flex items-center justify-center gap-2"
+                  >
+                    <Send size={16} />
+                    Send to Everyone
+                  </button>
+                </div>
+                
+                <div className="p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border-2 border-red-200">
+                  <h3 className="text-sm font-bold text-red-800 mb-3 flex items-center gap-2">
+                    <Trophy size={16} />
+                    🔧 Fix Chapter Count
+                  </h3>
+                  <p className="text-xs text-red-700 mb-3">
+                    If your chapter count is incorrect, use one of these options:
+                  </p>
+                  <div className="space-y-2">
+                    <button
+                      onClick={async () => {
+                        const userRef = ref(database, `users/${currentUser}`);
+                        try {
+                          const snapshot = await get(userRef);
+                          const userData = snapshot.val() || {};
+                          const chaptersData = userData.completedChapters || {};
+                          
+                          // Calculate total from completed chapters
+                          const totalFromChapters = Object.values(chaptersData).reduce((sum, chapters) => sum + chapters.length, 0);
+                          const extraChapters = userData.extraChapters || 0;
+                          const newTotal = totalFromChapters + extraChapters;
+                          
+                          await update(userRef, {
+                            totalChapters: newTotal
+                          });
+                          
+                          alert(`✅ Recalculated! Your chapter count is now ${newTotal} (${totalFromChapters} completed + ${extraChapters} bonus)`);
+                        } catch (error) {
+                          console.error('Error recalculating:', error);
+                          alert('❌ Failed to recalculate. Please try again.');
+                        }
+                      }}
+                      className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2.5 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition shadow text-sm"
+                    >
+                      Recalculate from Completed Chapters
+                    </button>
+                    
+                    <button
+                      onClick={async () => {
+                        if (!window.confirm('This will reset ALL your progress to 0. Are you sure?')) return;
+                        
+                        const userRef = ref(database, `users/${currentUser}`);
+                        try {
+                          await update(userRef, {
+                            totalChapters: 0,
+                            extraChapters: 0,
+                            completedChapters: {},
+                            completedDates: [],
+                            streak: 0
+                          });
+                          
+                          setCompletedChapters({});
+                          alert('✅ All progress reset to 0!');
+                        } catch (error) {
+                          console.error('Error resetting:', error);
+                          alert('❌ Failed to reset. Please try again.');
+                        }
+                      }}
+                      className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-2.5 rounded-xl font-semibold hover:from-red-700 hover:to-red-800 transition shadow text-sm"
+                    >
+                      ⚠️ Reset ALL Progress to 0
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         

@@ -2508,7 +2508,7 @@ function App() {
           <h3 className="text-sm font-bold text-purple-600">Bible Challenge</h3>
           <h2 className="text-xl font-bold text-gray-800 flex items-center justify-center gap-2">
             <Users className="text-purple-600" />
-            Community Progresss
+            Community Progress
           </h2>
         </div>
         <div className="space-y-3">

@@ -1451,25 +1451,6 @@ function App() {
           id: key
         }));
         setUsers(userList);
-        
-        // One-time data migration: recalculate totalChapters for all users
-        Object.keys(data).forEach(async (userId) => {
-          const userData = data[userId];
-          const completedChapters = userData.completedChapters || {};
-          const totalChaptersFromData = Object.values(completedChapters).reduce((sum, chapters) => sum + chapters.length, 0);
-          const calculatedTotal = totalChaptersFromData + (userData.extraChapters || 0);
-          
-          // Only update if the calculated total differs from stored total
-          if (userData.totalChapters !== calculatedTotal) {
-            const userRef = ref(database, `users/${userId}`);
-            try {
-              await update(userRef, { totalChapters: calculatedTotal });
-              console.log(`Fixed totalChapters for ${userId}: ${userData.totalChapters} -> ${calculatedTotal}`);
-            } catch (error) {
-              console.error(`Error fixing totalChapters for ${userId}:`, error);
-            }
-          }
-        });
       }
       setLoading(false);
     });

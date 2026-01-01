@@ -4,45 +4,58 @@
   "description": "Read through scripture together, track your progress, and encourage your community.",
   "icons": [
     {
-      "src": "bible-challenge-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "apple-touch-icon.png",
+      "src": "logo192.png",
       "type": "image/png",
-      "sizes": "180x180",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "apple-touch-icon-152.png",
-      "type": "image/png",
-      "sizes": "152x152",
-      "purpose": "any maskable"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
       "src": "logo192.png",
       "type": "image/png",
       "sizes": "192x192",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "any"
+    },
+    {
+      "src": "apple-touch-icon-152.png",
+      "type": "image/png",
+      "sizes": "152x152",
+      "purpose": "any"
+    },
+    {
+      "src": "bible-challenge-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#4c35e6",
   "background_color": "#ffffff",
   "scope": "/",
   "categories": ["lifestyle", "education", "books"]
+}

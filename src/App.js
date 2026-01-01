@@ -1429,6 +1429,7 @@ function App() {
 
     // Listen for install prompt
     const handleBeforeInstallPrompt = (e) => {
+      console.log('beforeinstallprompt event fired!', e);
       e.preventDefault();
       setDeferredPrompt(e);
       setIsInstallable(true);
@@ -1437,24 +1438,52 @@ function App() {
 
     // Check if app is already installed
     const checkIfInstalled = () => {
-      if (window.matchMedia('(display-mode: standalone)').matches) {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                          (window.navigator.standalone === true);
+
+      if (isStandalone) {
         // App is already installed
         setIsInstallable(false);
-      } else if ('standalone' in window.navigator && window.navigator.standalone) {
-        // iOS standalone mode
-        setIsInstallable(false);
+        console.log('App is already installed (standalone mode)');
       } else {
-        setIsInstallable(true);
+        // Check if browser supports PWA installation
+        const hasServiceWorker = 'serviceWorker' in navigator;
+        const hasBeforeInstallPrompt = 'onbeforeinstallprompt' in window;
+        const isAndroid = /Android/.test(navigator.userAgent);
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+        const isEdge = /Edg/.test(navigator.userAgent);
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+        // App is installable if it's a supported browser and not already installed
+        const canInstall = hasServiceWorker && (hasBeforeInstallPrompt || isIOS || (isAndroid && (isChrome || isEdge)));
+
+        setIsInstallable(canInstall);
+        console.log('Install check:', { hasServiceWorker, hasBeforeInstallPrompt, isAndroid, isChrome, isEdge, isIOS, canInstall });
       }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     checkIfInstalled();
 
+    // Also check after a short delay to ensure service worker is ready
+    const timeoutId = setTimeout(() => {
+      if (!deferredPrompt && isInstallable) {
+        console.log('No deferredPrompt after delay, checking PWA readiness...');
+        // Force installable state for Android Chrome
+        const isAndroid = /Android/.test(navigator.userAgent);
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+        if (isAndroid && isChrome) {
+          console.log('Android Chrome detected, assuming install prompt should be available');
+          // Don't set deferredPrompt to null, but keep isInstallable true
+        }
+      }
+    }, 2000);
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      clearTimeout(timeoutId);
     };
-  }, [language]);  const loadData = () => {
+  }, [language, deferredPrompt, isInstallable]);  const loadData = () => {
     const usersRef = ref(database, 'users');
 
     onValue(usersRef, (snapshot) => {
@@ -2708,6 +2737,7 @@ function App() {
               onClick={async () => {
                 if (deferredPrompt) {
                   // Direct install available (Chrome/Edge on Android)
+                  console.log('Using deferredPrompt for direct install');
                   deferredPrompt.prompt();
                   const { outcome } = await deferredPrompt.userChoice;
                   if (outcome === 'accepted') {
@@ -2718,24 +2748,32 @@ function App() {
                   }
                   setDeferredPrompt(null);
                 } else {
-                  // Try to trigger install or show instructions
-                  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                  // Check if we can use alternative install methods
                   const isAndroid = /Android/.test(navigator.userAgent);
+                  const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+                  const isEdge = /Edg/.test(navigator.userAgent);
+                  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-                  if (isIOS) {
-                    // iOS - can't install programmatically, show instructions
-                    if (window.confirm('📱 To install on iPhone/iPad:\n\n1. Tap the Share button (square with arrow) below\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" in the top right\n\nWould you like me to show you where the Share button is?')) {
-                      alert('Look for the square with an arrow pointing up - it\'s usually at the bottom or top of your screen!');
+                  if (isAndroid && (isChrome || isEdge)) {
+                    // Android Chrome/Edge - provide specific instructions for install icon
+                    console.log('Android Chrome/Edge detected, showing install icon instructions');
+                    const result = window.confirm('📱 To install on Android Chrome/Edge:\n\n1. Look at the top of your browser - you should see an "Install" or "Add" icon in the address bar (it looks like a computer monitor with a down arrow)\n2. Tap that icon\n3. Select "Install" or "Add to Home screen"\n\nCan you see the install icon in your address bar?');
+
+                    if (result) {
+                      alert('Perfect! Tap the install icon in your address bar. If you don\'t see it, try refreshing the page or tapping the ⋮ menu and looking for "Add to Home screen".');
+                    } else {
+                      alert('If you don\'t see the install icon, try:\n1. Refreshing this page\n2. Tapping the ⋮ menu in the top right\n3. Looking for "Add to Home screen" or "Install Bible Challenge"');
                     }
-                  } else if (isAndroid) {
-                    // Android - try to find install option or show instructions
-                    if (window.confirm('📱 To install on Android:\n\n1. Tap the menu (⋮) in the top right\n2. Look for "Add to Home screen" or "Install app"\n3. Tap "Install"\n\nWould you like to try opening the browser menu now?')) {
-                      // Can't programmatically open browser menu, so just show encouragement
-                      alert('Great! Look for the ⋮ menu in your browser and find the install option!');
+                  } else if (isIOS) {
+                    // iOS Safari - specific instructions for Share button
+                    if (window.confirm('📱 To install on iPhone/iPad:\n\n1. Tap the Share button (it\'s a square with an arrow pointing up - usually at the bottom of your screen)\n2. Scroll through the options\n3. Tap "Add to Home Screen"\n4. Tap "Add" in the top right\n\nDo you see the Share button?')) {
+                      alert('Great! Tap the Share button, then scroll down and tap "Add to Home Screen". The Share button is usually a square with an arrow at the bottom of your screen.');
+                    } else {
+                      alert('The Share button is usually located at the bottom of your screen (center or right side). It looks like a square with an arrow pointing up. Try scrolling or look for it in the toolbar.');
                     }
                   } else {
-                    // Desktop or other browsers
-                    alert('📱 To install:\n\n• Chrome: Click the install icon in the address bar or menu (⋮) → Install\n• Edge: Menu (•••) → Apps → Install this site as an app\n• Safari (iPhone): Share → Add to Home Screen');
+                    // Other browsers - general instructions
+                    alert('📱 To install this app:\n\n• Chrome: Look for "Install" icon in address bar or ⋮ menu → Install\n• Edge: ⋮ menu → Apps → Install this site as an app\n• Safari (iPhone): Share button → Add to Home Screen\n• Firefox: ⋮ menu → Install This Site as an App\n\nTry refreshing the page first!');
                   }
                 }
               }}

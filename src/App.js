@@ -1451,6 +1451,25 @@ function App() {
           id: key
         }));
         setUsers(userList);
+        
+        // Temporary auto-recovery: If totalChapters is 0 but user has completedDates, restore from dates
+        Object.keys(data).forEach(async (userId) => {
+          const userData = data[userId];
+          const completedDates = userData.completedDates || [];
+          const currentTotal = userData.totalChapters || 0;
+          
+          // Only auto-recover if they have dates but totalChapters is 0
+          if (completedDates.length > 0 && currentTotal === 0) {
+            const recoveredTotal = completedDates.length * 4 + (userData.extraChapters || 0);
+            const userRef = ref(database, `users/${userId}`);
+            try {
+              await update(userRef, { totalChapters: recoveredTotal });
+              console.log(`Auto-recovered ${userId}: ${recoveredTotal} chapters from ${completedDates.length} days`);
+            } catch (error) {
+              console.error(`Error auto-recovering ${userId}:`, error);
+            }
+          }
+        });
       }
       setLoading(false);
     });

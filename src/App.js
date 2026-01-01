@@ -1619,15 +1619,34 @@ function App() {
       const snapshot = await get(userRef);
       const userData = snapshot.val() || {};
       const completed = userData.completedDates || [];
+      const chaptersData = userData.completedChapters || {};
       
-      if (!completed.includes(dateStr)) {
-        const newCompleted = [...completed, dateStr];
-        await update(userRef, {
-          completedDates: newCompleted,
-          totalChapters: (userData.totalChapters || 0) + CHAPTERS_PER_DAY,
-          streak: calculateStreak(newCompleted)
-        });
-      }
+      // Get the reading plan for this date
+      const dayNumber = Math.floor((planDate - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
+      const reading = getReadingForDay(dayNumber);
+      
+      // Mark all chapters for this day as completed
+      const dayChapters = reading.map(({ book, chapter }) => `${book} ${chapter}`);
+      const newChaptersData = {
+        ...chaptersData,
+        [dateStr]: dayChapters
+      };
+      
+      // Update local state
+      setCompletedChapters(newChaptersData);
+      
+      // Calculate total chapters from all dates
+      const totalChaptersFromDates = Object.values(newChaptersData).reduce((sum, chapters) => sum + chapters.length, 0);
+      
+      // Update completedDates if not already included
+      const newCompleted = completed.includes(dateStr) ? completed : [...completed, dateStr];
+      
+      await update(userRef, {
+        completedDates: newCompleted,
+        completedChapters: newChaptersData,
+        totalChapters: totalChaptersFromDates + (userData.extraChapters || 0),
+        streak: calculateStreak(newCompleted)
+      });
     } catch (error) {
       console.error('Error marking complete:', error);
     }
@@ -1642,10 +1661,22 @@ function App() {
       const snapshot = await get(userRef);
       const userData = snapshot.val() || {};
       const completed = (userData.completedDates || []).filter(d => d !== dateStr);
+      const chaptersData = userData.completedChapters || {};
+      
+      // Remove all chapters for this date
+      const newChaptersData = { ...chaptersData };
+      delete newChaptersData[dateStr];
+      
+      // Update local state
+      setCompletedChapters(newChaptersData);
+      
+      // Recalculate total chapters from all dates
+      const totalChaptersFromDates = Object.values(newChaptersData).reduce((sum, chapters) => sum + chapters.length, 0);
       
       await update(userRef, {
         completedDates: completed,
-        totalChapters: Math.max(0, (userData.totalChapters || 0) - CHAPTERS_PER_DAY),
+        completedChapters: newChaptersData,
+        totalChapters: totalChaptersFromDates + (userData.extraChapters || 0),
         streak: calculateStreak(completed)
       });
     } catch (error) {
@@ -1664,6 +1695,7 @@ function App() {
       const userData = snapshot.val() || {};
       const chaptersData = userData.completedChapters || {};
       const dateChapters = chaptersData[dateStr] || [];
+      const completedDates = userData.completedDates || [];
       
       let newDateChapters;
       if (dateChapters.includes(chapterKey)) {
@@ -1685,10 +1717,26 @@ function App() {
       // Calculate total chapters across all dates
       const totalChaptersFromDates = Object.values(newChaptersData).reduce((sum, chapters) => sum + chapters.length, 0);
       
+      // Check if all chapters for this day are completed
+      const dayNumber = Math.floor((planDate - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
+      const reading = getReadingForDay(dayNumber);
+      const allDayChapters = reading.map(({ book, chapter }) => `${book} ${chapter}`);
+      const allCompleted = allDayChapters.every(ch => newDateChapters.includes(ch));
+      
+      // Update completedDates based on whether all chapters are done
+      let newCompletedDates = completedDates;
+      if (allCompleted && !completedDates.includes(dateStr)) {
+        newCompletedDates = [...completedDates, dateStr];
+      } else if (!allCompleted && completedDates.includes(dateStr)) {
+        newCompletedDates = completedDates.filter(d => d !== dateStr);
+      }
+      
       // Update Firebase
       await update(userRef, {
         completedChapters: newChaptersData,
-        totalChapters: totalChaptersFromDates + (userData.extraChapters || 0)
+        completedDates: newCompletedDates,
+        totalChapters: totalChaptersFromDates + (userData.extraChapters || 0),
+        streak: calculateStreak(newCompletedDates)
       });
     } catch (error) {
       console.error('Error toggling chapter:', error);
@@ -1811,7 +1859,7 @@ function App() {
 
   const getProgress = (userName) => {
     const user = users.find(u => u.id === userName);
-    const percent = ((user?.completedDates?.length || 0) / TOTAL_DAYS) * 100;
+    const percent = ((user?.totalChapters || 0) / TOTAL_CHAPTERS) * 100;
     return Math.min(100, percent);
   };
 

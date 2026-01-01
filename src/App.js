@@ -95,7 +95,7 @@ const TRANSLATIONS = {
     removeChapters: "Remove Chapters",
     removeNote: "This will only remove from your bonus chapters count.",
     deleteAccount: "Need to step away? You can remove your account and all progress anytime. This only affects your data.",
-    deleteProgress: "Delete My Progress",
+    deleteProgress: "Delete My Account",
     shareApp: "Share Bible Challenge with Friends",
     shareDesc: "Invite others to join this amazing journey! 📖✨",
     
@@ -2460,7 +2460,7 @@ function App() {
                 </div>
                 <div className="flex gap-3 text-xs text-gray-600">
                   <span>🔥 {user.streak || 0} days</span>
-                  <span>📖 {user.totalChapters || 0} ch</span>
+                  <span>📖 {user.totalChapters || 0}/{TOTAL_CHAPTERS}</span>
                   <span>✅ {user.completedDates?.length || 0}/{TOTAL_DAYS}</span>
                 </div>
               </div>
@@ -2550,71 +2550,6 @@ function App() {
                     <Send size={16} />
                     Send to Everyone
                   </button>
-                </div>
-                
-                <div className="p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border-2 border-red-200">
-                  <h3 className="text-sm font-bold text-red-800 mb-3 flex items-center gap-2">
-                    <Trophy size={16} />
-                    🔧 Fix Chapter Count
-                  </h3>
-                  <p className="text-xs text-red-700 mb-3">
-                    If your chapter count is incorrect, use one of these options:
-                  </p>
-                  <div className="space-y-2">
-                    <button
-                      onClick={async () => {
-                        const userRef = ref(database, `users/${currentUser}`);
-                        try {
-                          const snapshot = await get(userRef);
-                          const userData = snapshot.val() || {};
-                          const chaptersData = userData.completedChapters || {};
-                          
-                          // Calculate total from completed chapters
-                          const totalFromChapters = Object.values(chaptersData).reduce((sum, chapters) => sum + chapters.length, 0);
-                          const extraChapters = userData.extraChapters || 0;
-                          const newTotal = totalFromChapters + extraChapters;
-                          
-                          await update(userRef, {
-                            totalChapters: newTotal
-                          });
-                          
-                          alert(`✅ Recalculated! Your chapter count is now ${newTotal} (${totalFromChapters} completed + ${extraChapters} bonus)`);
-                        } catch (error) {
-                          console.error('Error recalculating:', error);
-                          alert('❌ Failed to recalculate. Please try again.');
-                        }
-                      }}
-                      className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2.5 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition shadow text-sm"
-                    >
-                      Recalculate from Completed Chapters
-                    </button>
-                    
-                    <button
-                      onClick={async () => {
-                        if (!window.confirm('This will reset ALL your progress to 0. Are you sure?')) return;
-                        
-                        const userRef = ref(database, `users/${currentUser}`);
-                        try {
-                          await update(userRef, {
-                            totalChapters: 0,
-                            extraChapters: 0,
-                            completedChapters: {},
-                            completedDates: [],
-                            streak: 0
-                          });
-                          
-                          setCompletedChapters({});
-                          alert('✅ All progress reset to 0!');
-                        } catch (error) {
-                          console.error('Error resetting:', error);
-                          alert('❌ Failed to reset. Please try again.');
-                        }
-                      }}
-                      className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-2.5 rounded-xl font-semibold hover:from-red-700 hover:to-red-800 transition shadow text-sm"
-                    >
-                      ⚠️ Reset ALL Progress to 0
-                    </button>
-                  </div>
                 </div>
               </div>
             )}
@@ -2853,17 +2788,69 @@ function App() {
           )}
         </div>
 
-        <div className="mb-6">
-          <button
-            onClick={shareApp}
-            className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-2xl font-semibold hover:from-green-600 hover:to-green-700 transition shadow flex items-center justify-center gap-2"
-          >
-            <Share2 size={18} />
-            Share Bible Challenge with Friends
-          </button>
-          <p className="text-xs text-gray-500 mt-2 text-center">
-            Invite others to join this amazing journey! 📖✨
+        <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border-2 border-red-200">
+          <h3 className="text-sm font-bold text-red-800 mb-3 flex items-center gap-2">
+            <Trophy size={16} />
+            🔧 Fix Chapter Count
+          </h3>
+          <p className="text-xs text-red-700 mb-3">
+            If your chapter count is incorrect, use one of these options:
           </p>
+          <div className="space-y-2">
+            <button
+              onClick={async () => {
+                const userRef = ref(database, `users/${currentUser}`);
+                try {
+                  const snapshot = await get(userRef);
+                  const userData = snapshot.val() || {};
+                  const chaptersData = userData.completedChapters || {};
+                  
+                  // Calculate total from completed chapters
+                  const totalFromChapters = Object.values(chaptersData).reduce((sum, chapters) => sum + chapters.length, 0);
+                  const extraChapters = userData.extraChapters || 0;
+                  const newTotal = totalFromChapters + extraChapters;
+                  
+                  await update(userRef, {
+                    totalChapters: newTotal
+                  });
+                  
+                  alert(`✅ Recalculated! Your chapter count is now ${newTotal} (${totalFromChapters} completed + ${extraChapters} bonus)`);
+                } catch (error) {
+                  console.error('Error recalculating:', error);
+                  alert('❌ Failed to recalculate. Please try again.');
+                }
+              }}
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2.5 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition shadow text-sm"
+            >
+              Recalculate from Completed Chapters
+            </button>
+            
+            <button
+              onClick={async () => {
+                if (!window.confirm('This will reset ALL your progress to 0. Are you sure?')) return;
+                
+                const userRef = ref(database, `users/${currentUser}`);
+                try {
+                  await update(userRef, {
+                    totalChapters: 0,
+                    extraChapters: 0,
+                    completedChapters: {},
+                    completedDates: [],
+                    streak: 0
+                  });
+                  
+                  setCompletedChapters({});
+                  alert('✅ All progress reset to 0!');
+                } catch (error) {
+                  console.error('Error resetting:', error);
+                  alert('❌ Failed to reset. Please try again.');
+                }
+              }}
+              className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-2.5 rounded-xl font-semibold hover:from-red-700 hover:to-red-800 transition shadow text-sm"
+            >
+              ⚠️ Reset ALL Progress to 0
+            </button>
+          </div>
         </div>
 
         <div className="mt-6 border-t border-gray-200 pt-4">
@@ -2872,7 +2859,7 @@ function App() {
             onClick={handleDeleteAccount}
             className="w-full border-2 border-red-200 text-red-600 py-3 rounded-2xl font-semibold hover:bg-red-50 transition flex items-center justify-center gap-2"
           >
-            <Trash2 size={18} /> Delete My Progress
+            <Trash2 size={18} /> Delete My Account
           </button>
         </div>
       </div>

@@ -1405,6 +1405,8 @@ function App() {
   const [announcementInput, setAnnouncementInput] = useState('');
   const [theme, setTheme] = useState('purple-blue'); // Default theme
   const [language, setLanguage] = useState('en'); // Default language
+  const [completedChapters, setCompletedChapters] = useState({}); // { 'date': ['Book Chapter', ...] }
+  const [showCatchUp, setShowCatchUp] = useState(false);
 
   // Translation hook
   const { t } = useTranslation(language);
@@ -1463,6 +1465,9 @@ function App() {
     }
     if (userData?.name) {
       setDisplayNameInput(userData.name);
+    }
+    if (userData?.completedChapters) {
+      setCompletedChapters(userData.completedChapters);
     }
   }, [currentUser, users]);
 
@@ -1643,6 +1648,48 @@ function App() {
       });
     } catch (error) {
       console.error('Error marking incomplete:', error);
+    }
+  };
+
+  const toggleChapter = async (date, book, chapter) => {
+    const planDate = clampDateToPlan(date);
+    const dateStr = planDate.toISOString().split('T')[0];
+    const chapterKey = `${book} ${chapter}`;
+    const userRef = ref(database, `users/${currentUser}`);
+    
+    try {
+      const snapshot = await get(userRef);
+      const userData = snapshot.val() || {};
+      const chaptersData = userData.completedChapters || {};
+      const dateChapters = chaptersData[dateStr] || [];
+      
+      let newDateChapters;
+      if (dateChapters.includes(chapterKey)) {
+        // Remove chapter
+        newDateChapters = dateChapters.filter(c => c !== chapterKey);
+      } else {
+        // Add chapter
+        newDateChapters = [...dateChapters, chapterKey];
+      }
+      
+      const newChaptersData = {
+        ...chaptersData,
+        [dateStr]: newDateChapters
+      };
+      
+      // Update local state
+      setCompletedChapters(newChaptersData);
+      
+      // Calculate total chapters across all dates
+      const totalChaptersFromDates = Object.values(newChaptersData).reduce((sum, chapters) => sum + chapters.length, 0);
+      
+      // Update Firebase
+      await update(userRef, {
+        completedChapters: newChaptersData,
+        totalChapters: totalChaptersFromDates + (userData.extraChapters || 0)
+      });
+    } catch (error) {
+      console.error('Error toggling chapter:', error);
     }
   };
 
@@ -2043,18 +2090,31 @@ function App() {
               </h2>
               <p className="text-sm text-gray-500 mb-2">{planToday.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
               <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 mb-4">
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {todayReading.map(({ book, chapter }, idx) => (
-                    <a
-                      key={`${book}-${chapter}-${idx}`}
-                      href={getBibleGatewayLink(book, chapter, language)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-purple-200 text-purple-800 px-3 py-2 rounded-full text-sm font-semibold hover:bg-purple-300 transition"
-                    >
-                      {`${book} ${chapter}`}
-                    </a>
-                  ))}
+                <div className="space-y-2 mb-4">
+                  {todayReading.map(({ book, chapter }, idx) => {
+                    const dateStr = planToday.toISOString().split('T')[0];
+                    const chapterKey = `${book} ${chapter}`;
+                    const isCompleted = (completedChapters[dateStr] || []).includes(chapterKey);
+                    
+                    return (
+                      <div key={`${book}-${chapter}-${idx}`} className="flex items-center gap-3 bg-white rounded-xl p-3 border-2 border-purple-100">
+                        <input
+                          type="checkbox"
+                          checked={isCompleted}
+                          onChange={() => toggleChapter(planToday, book, chapter)}
+                          className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                        />
+                        <a
+                          href={getBibleGatewayLink(book, chapter, language)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 text-purple-800 font-semibold hover:text-purple-600 transition"
+                        >
+                          {`${book} ${chapter}`}
+                        </a>
+                      </div>
+                    );
+                  })}
                 </div>
                 {!todayCompleted ? (
                   <button
@@ -2079,6 +2139,88 @@ function App() {
                   </div>
                 )}
               </div>
+              
+              {/* Catch Up Section */}
+              <button
+                onClick={() => setShowCatchUp(!showCatchUp)}
+                className="w-full bg-orange-100 text-orange-700 py-3 rounded-2xl font-semibold hover:bg-orange-200 transition flex items-center justify-center gap-2 mb-3"
+              >
+                <Clock size={18} />
+                Catch Up on Missed Days
+                <span className="text-sm">{showCatchUp ? '▲' : '▼'}</span>
+              </button>
+              
+              {showCatchUp && (
+                <div className="bg-orange-50 rounded-2xl p-4 mb-4 space-y-3">
+                  <p className="text-sm text-orange-800 font-semibold mb-3">Missed readings from previous days:</p>
+                  {(() => {
+                    const missedDays = [];
+                    const today = new Date(planToday);
+                    
+                    // Check last 7 days
+                    for (let i = 1; i <= 7; i++) {
+                      const checkDate = new Date(today);
+                      checkDate.setDate(checkDate.getDate() - i);
+                      
+                      if (checkDate < START_DATE) break;
+                      
+                      const dateStr = checkDate.toISOString().split('T')[0];
+                      const dayNumber = getDayNumber(checkDate);
+                      const reading = getReadingForDay(dayNumber, language);
+                      const dateChapters = completedChapters[dateStr] || [];
+                      const allCompleted = reading.every(({ book, chapter }) => 
+                        dateChapters.includes(`${book} ${chapter}`)
+                      );
+                      
+                      if (!allCompleted) {
+                        missedDays.push({ date: checkDate, reading, dateStr });
+                      }
+                    }
+                    
+                    if (missedDays.length === 0) {
+                      return (
+                        <p className="text-sm text-orange-600 text-center py-2">
+                          🎉 You're all caught up! No missed readings in the last 7 days.
+                        </p>
+                      );
+                    }
+                    
+                    return missedDays.map(({ date, reading, dateStr }) => (
+                      <div key={dateStr} className="bg-white rounded-xl p-3 border-2 border-orange-200">
+                        <p className="text-sm font-semibold text-orange-800 mb-2">
+                          {date.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                        <div className="space-y-2">
+                          {reading.map(({ book, chapter }, idx) => {
+                            const chapterKey = `${book} ${chapter}`;
+                            const isCompleted = (completedChapters[dateStr] || []).includes(chapterKey);
+                            
+                            return (
+                              <div key={`${book}-${chapter}-${idx}`} className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={isCompleted}
+                                  onChange={() => toggleChapter(date, book, chapter)}
+                                  className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
+                                />
+                                <a
+                                  href={getBibleGatewayLink(book, chapter, language)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-orange-800 hover:text-orange-600 transition"
+                                >
+                                  {`${book} ${chapter}`}
+                                </a>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              )}
+              
               <button
                 onClick={() => {
                   setSelectedMonth(planToday.getMonth());

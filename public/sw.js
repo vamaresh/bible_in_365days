@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-challenge-v1';
+const CACHE_NAME = 'bible-challenge-v3';
 const urlsToCache = [
   '/',
   '/manifest.json',

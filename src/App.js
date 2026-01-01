@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { database } from './firebaseConfig';
 import { ref, set, get, onValue, update } from 'firebase/database';
-import { Calendar, Check, Trophy, Users, BookOpen, Flame, Clock, Sparkles, PlusCircle, Trash2, User, Share2, Globe } from 'lucide-react';
+import { Calendar, Check, Trophy, Users, BookOpen, Flame, Clock, Sparkles, PlusCircle, Trash2, User, Share2, Globe, Send } from 'lucide-react';
 
 // Translation system
 const TRANSLATIONS = {
@@ -1402,6 +1402,7 @@ function App() {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [displayNameInput, setDisplayNameInput] = useState('');
+  const [announcementInput, setAnnouncementInput] = useState('');
   const [theme, setTheme] = useState('purple-blue'); // Default theme
   const [language, setLanguage] = useState('en'); // Default language
 
@@ -1460,6 +1461,9 @@ function App() {
     if (userData?.language) {
       setLanguage(userData.language);
     }
+    if (userData?.name) {
+      setDisplayNameInput(userData.name);
+    }
   }, [currentUser, users]);
 
   useEffect(() => {
@@ -1513,23 +1517,43 @@ function App() {
     }
   };
 
-  const saveReminderTime = async () => {
+  const saveReminderTime = async (time) => {
     const userRef = ref(database, `users/${currentUser}`);
     try {
-      await update(userRef, { reminderTime });
-      setShowSettings(false);
-      alert(`✅ Reminder set for ${reminderTime} daily!\n\nNote: Make sure to enable notifications in your browser settings.`);
+      await update(userRef, { reminderTime: time || reminderTime });
     } catch (error) {
       console.error('Error saving reminder:', error);
     }
   };
 
-  const saveLanguage = async () => {
+  const sendAnnouncement = async () => {
+    if (!announcementInput.trim()) {
+      alert('Please enter an announcement message');
+      return;
+    }
+    
+    const timestamp = Date.now();
+    const announcementData = {
+      id: timestamp,
+      text: announcementInput,
+      sender: currentUser,
+      date: new Date().toISOString()
+    };
+
+    try {
+      await set(ref(database, `announcements/${timestamp}`), announcementData);
+      alert('✅ Announcement sent to everyone!');
+      setAnnouncementInput('');
+    } catch (error) {
+      console.error('Error sending announcement:', error);
+      alert('Failed to send announcement. Please try again.');
+    }
+  };
+
+  const saveLanguage = async (lang) => {
     const userRef = ref(database, `users/${currentUser}`);
     try {
-      await update(userRef, { language });
-      setShowSettings(false);
-      alert(`✅ Language changed to ${LANGUAGES.find(l => l.code === language)?.name}!\n\nThe app will now display in your selected language.`);
+      await update(userRef, { language: lang || language });
     } catch (error) {
       console.error('Error saving language:', error);
     }
@@ -1678,16 +1702,15 @@ function App() {
     }
   };
 
-  const handleUpdateDisplayName = async () => {
+  const handleUpdateDisplayName = async (name) => {
     if (!currentUser) return;
-    const trimmed = displayNameInput.trim();
+    const trimmed = (name || displayNameInput).trim();
     if (!trimmed) return;
 
     const userRef = ref(database, `users/${currentUser}`);
 
     try {
       await update(userRef, { name: trimmed });
-      alert('✅ Display name updated!');
     } catch (error) {
       console.error('Error updating display name:', error);
     }
@@ -2341,6 +2364,28 @@ function App() {
           </button>
         </div>
         
+        {(currentUser === 'Amar' || currentUser === 'Amaresh') && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border-2 border-blue-200">
+            <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
+              <Globe size={16} />
+              📢 Send Announcement (Admin Only)
+            </h3>
+            <textarea
+              value={announcementInput}
+              onChange={(e) => setAnnouncementInput(e.target.value)}
+              placeholder="Type your announcement message here..."
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-purple-500 focus:outline-none text-sm mb-3 min-h-[100px]"
+            />
+            <button
+              onClick={sendAnnouncement}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-2xl font-semibold hover:from-blue-600 hover:to-purple-600 transition shadow flex items-center justify-center gap-2"
+            >
+              <Send size={16} />
+              Send to Everyone
+            </button>
+          </div>
+        )}
+        
         <div className="mb-6 space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
@@ -2350,19 +2395,16 @@ function App() {
             <input
               type="text"
               value={displayNameInput}
-              onChange={(e) => setDisplayNameInput(e.target.value)}
+              onChange={(e) => {
+                setDisplayNameInput(e.target.value);
+                handleUpdateDisplayName(e.target.value);
+              }}
               placeholder="Name shown on leaderboards"
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-purple-500 focus:outline-none text-lg"
             />
             <p className="text-xs text-gray-500 mt-2">
               This name appears on the community leaderboard and shared stats.
             </p>
-            <button
-              onClick={handleUpdateDisplayName}
-              className="mt-3 w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-2xl font-semibold hover:from-purple-600 hover:to-blue-600 transition shadow"
-            >
-              Save Display Name
-            </button>
           </div>
 
           <div>
@@ -2373,25 +2415,44 @@ function App() {
             <input
               type="time"
               value={reminderTime}
-              onChange={(e) => setReminderTime(e.target.value)}
+              onChange={(e) => {
+                setReminderTime(e.target.value);
+                saveReminderTime(e.target.value);
+              }}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-purple-500 focus:outline-none text-lg"
             />
             <p className="text-xs text-gray-500 mt-2">
               Set your preferred daily reading time. You'll be reminded to complete your reading.
             </p>
-            <button
-              onClick={saveReminderTime}
-              className="mt-3 w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-2xl font-semibold hover:from-purple-700 hover:to-blue-700 transition shadow"
-            >
-              Save Reminder
-            </button>
           </div>
         </div>
 
         <div className="p-4 bg-blue-50 rounded-2xl">
-          <p className="text-sm text-blue-800">
-            <strong>💡 Tip:</strong> Enable browser notifications to receive daily reminders!
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-blue-800 font-semibold">
+              💡 Daily Reminder Notifications
+            </p>
+          </div>
+          <p className="text-xs text-blue-700 mb-3">
+            Get notified at your set reading time to stay on track!
           </p>
+          <button
+            onClick={async () => {
+              if ('Notification' in window) {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                  alert('✅ Notifications enabled! You\'ll receive daily reminders.');
+                } else {
+                  alert('❌ Notifications blocked. Please enable them in your browser settings.');
+                }
+              } else {
+                alert('Notifications are not supported in your browser.');
+              }
+            }}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-2.5 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition shadow text-sm"
+          >
+            Enable Notifications
+          </button>
         </div>
 
         <div className="p-4 bg-green-50 rounded-2xl">
@@ -2411,7 +2472,10 @@ function App() {
             </label>
             <select
               value={language}
-              onChange={(e) => setLanguage(e.target.value)}
+              onChange={(e) => {
+                setLanguage(e.target.value);
+                saveLanguage(e.target.value);
+              }}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-purple-500 focus:outline-none text-lg"
             >
               {LANGUAGES.map((lang) => (
@@ -2423,12 +2487,6 @@ function App() {
             <p className="text-xs text-gray-500 mt-2">
               Choose your preferred language for the app interface and Bible content.
             </p>
-            <button
-              onClick={saveLanguage}
-              className="mt-3 w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-2xl font-semibold hover:from-blue-600 hover:to-purple-600 transition shadow"
-            >
-              Save Language
-            </button>
           </div>
 
           <div>

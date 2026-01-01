@@ -1376,12 +1376,12 @@ const clampDateToPlan = (date) => {
   return withinPlan;
 };
 
-const getCommunityBadgeLabel = (progress) => {
+const getCommunityBadgeLabel = (progress, completedDays = 0) => {
   if (progress >= 100) return '👑 Finisher';
   if (progress >= 75) return '🔥 Torchbearer';
   if (progress >= 50) return '🏅 Steadfast';
   if (progress >= 25) return '💪 Determined';
-  if (progress >= 1) return '🌱 Starter';
+  if (completedDays >= 1) return '🌱 Starter';
   return '';
 };
 
@@ -1920,7 +1920,14 @@ function App() {
         </div>
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h2 className="text-xl font-bold">{t('hiUser', { name: currentUserData?.name || currentUser })}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold">{t('hiUser', { name: currentUserData?.name || currentUser })}</h2>
+              {getCommunityBadgeLabel(progressPercent, currentUserData?.completedDates?.length || 0) && (
+                <span className="text-lg">
+                  {getCommunityBadgeLabel(progressPercent, currentUserData?.completedDates?.length || 0).split(' ')[0]}
+                </span>
+              )}
+            </div>
             <p className="text-purple-600 text-sm">{t('dayOfTotal', { day: todayDayNumber, total: TOTAL_DAYS })}</p>
             {!hasPlanStarted && (
               <p className="text-purple-200 text-xs mt-1">
@@ -2241,7 +2248,7 @@ function App() {
         <div className="space-y-3">
           {[...users].sort((a, b) => (b.completedDates?.length || 0) - (a.completedDates?.length || 0)).map((user, idx) => {
             const userProgress = (Math.round(getProgress(user.id) * 10) / 10).toFixed(1);
-            const badgeLabel = getCommunityBadgeLabel(userProgress);
+            const badgeLabel = getCommunityBadgeLabel(userProgress, user.completedDates?.length || 0);
             return (
               <div key={user.id} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 border-2 border-purple-100">
                 <div className="flex items-center justify-between mb-2">
@@ -2250,12 +2257,12 @@ function App() {
                     {idx === 1 && <Trophy className="text-gray-400" size={20} />}
                     {idx === 2 && <Trophy className="text-orange-400" size={20} />}
                     <span className="font-bold text-gray-800">{user.name}</span>
-                    {user.streak >= 7 && <Flame className="text-orange-500" size={16} />}
                     {badgeLabel && (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-white text-purple-600 border border-gray-200">
-                        {badgeLabel}
+                      <span className="text-lg" title={badgeLabel}>
+                        {badgeLabel.split(' ')[0]}
                       </span>
                     )}
+                    {user.streak >= 7 && <Flame className="text-orange-500" size={16} />}
                   </div>
                   <span className="text-xl font-bold text-purple-600">{userProgress}%</span>
                 </div>

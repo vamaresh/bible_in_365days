@@ -16,12 +16,15 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
-        console.log('SW registered: ', registration);
+        console.log('SW registered successfully:', registration);
+        console.log('SW scope:', registration.scope);
       })
-      .catch((registrationError) => {
-        console.log('SW registration failed: ', registrationError);
+      .catch((error) => {
+        console.error('SW registration failed:', error);
       });
   });
+} else {
+  console.log('Service workers not supported');
 }
 
 // If you want to start measuring performance in your app, pass a function

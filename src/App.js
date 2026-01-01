@@ -2059,11 +2059,34 @@ function App() {
             <div className="flex-1">
               <h4 className="font-bold text-sm mb-1">{t('installBibleChallenge')}</h4>
               <p className="text-xs opacity-90 mb-2">Get the full app experience with offline access!</p>
-              <div className="flex gap-2 text-xs">
-                <span>📱 Android: Menu → Add to Home</span>
-                <span>🍎 iPhone: Share → Add to Home</span>
-              </div>
             </div>
+            <button
+              onClick={async () => {
+                if (deferredPrompt) {
+                  deferredPrompt.prompt();
+                  const { outcome } = await deferredPrompt.userChoice;
+                  if (outcome === 'accepted') {
+                    setShowInstallPrompt(false);
+                  }
+                  setDeferredPrompt(null);
+                } else {
+                  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                  const isAndroid = /Android/.test(navigator.userAgent);
+                  const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
+                  if (isIOS) {
+                    alert('📱 To install on iPhone/iPad:\n\n1. Tap the Share button (⬆️) at the bottom\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add"');
+                  } else if (isAndroid && isChrome) {
+                    alert('📱 To install on Android:\n\n1. Tap the menu (⋮) in the top right\n2. Tap "Add to Home screen" or "Install app"\n3. Tap "Install"');
+                  } else {
+                    alert('📱 To install:\n\nLook for the install option in your browser menu or address bar.');
+                  }
+                }
+              }}
+              className="bg-white text-green-600 px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-100 transition shadow-md whitespace-nowrap"
+            >
+              {deferredPrompt ? 'Install' : 'How to Install'}
+            </button>
           </div>
         </div>
       )}

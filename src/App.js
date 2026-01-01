@@ -2493,7 +2493,7 @@ function App() {
           </h2>
         </div>
         <div className="space-y-3">
-          {[...users].sort((a, b) => (b.completedDates?.length || 0) - (a.completedDates?.length || 0)).map((user, idx) => {
+          {[...users].sort((a, b) => getProgress(b.id) - getProgress(a.id)).map((user, idx) => {
             const userProgress = (Math.round(getProgress(user.id) * 10) / 10).toFixed(1);
             const badgeLabel = getCommunityBadgeLabel(userProgress, user.completedDates?.length || 0);
             return (

@@ -2606,10 +2606,12 @@ function App() {
         </div>
         <div className="space-y-3">
           {(() => {
-            // Find who completed today first
+            // Find who completed today first (from midnight UTC)
+            const now = new Date();
+            const todayMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
             const today = new Date().toISOString().split('T')[0];
             const usersWithTimestamps = users
-              .filter(u => u.completionTimestamps?.[today])
+              .filter(u => u.completionTimestamps?.[today] && u.completionTimestamps[today] >= todayMidnight)
               .sort((a, b) => (a.completionTimestamps[today] || 0) - (b.completionTimestamps[today] || 0));
             const firstTodayUserId = usersWithTimestamps.length > 0 ? usersWithTimestamps[0].id : null;
             
@@ -2628,7 +2630,7 @@ function App() {
                       <span className="font-bold text-gray-800">{user.name}</span>
                       {isFirstToday && (
                         <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-2 py-1 rounded-full font-bold" title="First to complete today!">
-                          🥇 First Today
+                          🥇 1st Today
                         </span>
                       )}
                       {badgeLabel && (

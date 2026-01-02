@@ -1478,6 +1478,7 @@ function App() {
           const userData = data[userId];
           const completedDates = userData.completedDates || [];
           const currentTotal = userData.totalChapters || 0;
+          const completedChapters = userData.completedChapters || {};
           
           // Only auto-recover if they have dates but totalChapters is 0
           if (completedDates.length > 0 && currentTotal === 0) {
@@ -1488,6 +1489,32 @@ function App() {
               console.log(`Auto-recovered ${userId}: ${recoveredTotal} chapters from ${completedDates.length} days`);
             } catch (error) {
               console.error(`Error auto-recovering ${userId}:`, error);
+            }
+          }
+          
+          // Fix users who have chapters but no dates (from the data wipe)
+          if (currentTotal > 0 && completedDates.length === 0 && Object.keys(completedChapters).length === 0) {
+            // Estimate completed dates based on chapter count (4 chapters per day)
+            const estimatedDays = Math.floor(currentTotal / 4);
+            if (estimatedDays > 0) {
+              const newCompletedDates = [];
+              const startDate = new Date('2026-01-01');
+              for (let i = 0; i < estimatedDays; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                newCompletedDates.push(date.toISOString().split('T')[0]);
+              }
+              
+              const userRef = ref(database, `users/${userId}`);
+              try {
+                await update(userRef, { 
+                  completedDates: newCompletedDates,
+                  streak: newCompletedDates.length 
+                });
+                console.log(`Fixed dates for ${userId}: Added ${estimatedDays} dates`);
+              } catch (error) {
+                console.error(`Error fixing dates for ${userId}:`, error);
+              }
             }
           }
         });

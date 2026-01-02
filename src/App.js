@@ -1708,11 +1708,18 @@ function App() {
       // Update completedDates if not already included
       const newCompleted = completed.includes(dateStr) ? completed : [...completed, dateStr];
       
+      // Track completion timestamps for daily badges
+      const completionTimestamps = userData.completionTimestamps || {};
+      if (!completionTimestamps[dateStr]) {
+        completionTimestamps[dateStr] = Date.now();
+      }
+      
       await update(userRef, {
         completedDates: newCompleted,
         completedChapters: newChaptersData,
         totalChapters: totalChaptersFromDates + (userData.extraChapters || 0),
-        streak: calculateStreak(newCompleted)
+        streak: calculateStreak(newCompleted),
+        completionTimestamps: completionTimestamps
       });
     } catch (error) {
       console.error('Error marking complete:', error);
@@ -2598,40 +2605,56 @@ function App() {
           </h2>
         </div>
         <div className="space-y-3">
-          {[...users].sort((a, b) => (b.totalChapters || 0) - (a.totalChapters || 0)).map((user, idx) => {
-            const userProgress = (Math.round(getProgress(user.id) * 10) / 10).toFixed(1);
-            const badgeLabel = getCommunityBadgeLabel(userProgress, user.completedDates?.length || 0);
-            return (
-              <div key={user.id} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 border-2 border-purple-100">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {idx === 0 && <Trophy className="text-yellow-500" size={20} />}
-                    {idx === 1 && <Trophy className="text-gray-400" size={20} />}
-                    {idx === 2 && <Trophy className="text-orange-400" size={20} />}
-                    <span className="font-bold text-gray-800">{user.name}</span>
-                    {badgeLabel && (
-                      <span className="text-lg" title={badgeLabel}>
-                        {badgeLabel.split(' ')[0]}
-                      </span>
-                    )}
-                    {user.streak >= 7 && <Flame className="text-orange-500" size={16} />}
+          {(() => {
+            // Find who completed today first
+            const today = new Date().toISOString().split('T')[0];
+            const usersWithTimestamps = users
+              .filter(u => u.completionTimestamps?.[today])
+              .sort((a, b) => (a.completionTimestamps[today] || 0) - (b.completionTimestamps[today] || 0));
+            const firstTodayUserId = usersWithTimestamps.length > 0 ? usersWithTimestamps[0].id : null;
+            
+            return [...users].sort((a, b) => (b.totalChapters || 0) - (a.totalChapters || 0)).map((user, idx) => {
+              const userProgress = (Math.round(getProgress(user.id) * 10) / 10).toFixed(1);
+              const badgeLabel = getCommunityBadgeLabel(userProgress, user.completedDates?.length || 0);
+              const isFirstToday = user.id === firstTodayUserId;
+              
+              return (
+                <div key={user.id} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 border-2 border-purple-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {idx === 0 && <Trophy className="text-yellow-500" size={20} />}
+                      {idx === 1 && <Trophy className="text-gray-400" size={20} />}
+                      {idx === 2 && <Trophy className="text-orange-400" size={20} />}
+                      <span className="font-bold text-gray-800">{user.name}</span>
+                      {isFirstToday && (
+                        <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-2 py-1 rounded-full font-bold" title="First to complete today!">
+                          🥇 First Today
+                        </span>
+                      )}
+                      {badgeLabel && (
+                        <span className="text-lg" title={badgeLabel}>
+                          {badgeLabel.split(' ')[0]}
+                        </span>
+                      )}
+                      {user.streak >= 7 && <Flame className="text-orange-500" size={16} />}
+                    </div>
+                    <span className="text-xl font-bold text-purple-600">{userProgress}%</span>
                   </div>
-                  <span className="text-xl font-bold text-purple-600">{userProgress}%</span>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                    <div
+                      className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all"
+                      style={{ width: `${userProgress}%` }}
+                    />
+                  </div>
+                  <div className="flex gap-3 text-xs text-gray-600">
+                    <span>🔥 {user.streak || 0} days</span>
+                    <span>📖 {user.totalChapters || 0}/{TOTAL_CHAPTERS}</span>
+                    <span>✅ {user.completedDates?.length || 0}/{TOTAL_DAYS}</span>
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                  <div
-                    className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all"
-                    style={{ width: `${userProgress}%` }}
-                  />
-                </div>
-                <div className="flex gap-3 text-xs text-gray-600">
-                  <span>🔥 {user.streak || 0} days</span>
-                  <span>📖 {user.totalChapters || 0}/{TOTAL_CHAPTERS}</span>
-                  <span>✅ {user.completedDates?.length || 0}/{TOTAL_DAYS}</span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       </div>
     )}

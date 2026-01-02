@@ -2192,6 +2192,44 @@ function App() {
       <div className="px-4 space-y-4">
         {view === 'home' && (
           <>
+            {/* Announcements Display */}
+            {announcements.filter(a => !dismissedAnnouncements.includes(a.id)).length > 0 && (
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border-2 border-blue-200 p-4">
+                <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
+                  <Bell size={16} />
+                  📢 Announcements
+                </h3>
+                <div className="space-y-3">
+                  {announcements
+                    .filter(a => !dismissedAnnouncements.includes(a.id))
+                    .map(announcement => {
+                      const date = new Date(announcement.date).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      });
+                      
+                      return (
+                        <div key={announcement.id} className="bg-white p-3 rounded-xl border border-blue-200 relative">
+                          <button
+                            onClick={() => setDismissedAnnouncements([...dismissedAnnouncements, announcement.id])}
+                            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition"
+                            aria-label="Close announcement"
+                          >
+                            <X size={16} />
+                          </button>
+                          <p className="text-sm text-gray-800 mb-1 pr-6">{announcement.text}</p>
+                          <p className="text-xs text-gray-500">
+                            {date}
+                          </p>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+            
             <div className="bg-white rounded-3xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <Calendar className="text-purple-600" />
@@ -2654,46 +2692,6 @@ function App() {
                 </div>
               </div>
             )}
-          </div>
-        )}
-        
-        {/* Announcements Display */}
-        {announcements.filter(a => !dismissedAnnouncements.includes(a.id)).length > 0 && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border-2 border-blue-200">
-            <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
-              <Bell size={16} />
-              📢 Announcements
-            </h3>
-            <div className="space-y-3">
-              {announcements
-                .filter(a => !dismissedAnnouncements.includes(a.id))
-                .map(announcement => {
-                  const senderData = users.find(u => u.id === announcement.sender);
-                  const senderName = senderData?.name || 'Admin';
-                  const date = new Date(announcement.date).toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  });
-                  
-                  return (
-                    <div key={announcement.id} className="bg-white p-3 rounded-xl border border-blue-200 relative">
-                      <button
-                        onClick={() => setDismissedAnnouncements([...dismissedAnnouncements, announcement.id])}
-                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition"
-                        aria-label="Close announcement"
-                      >
-                        <X size={16} />
-                      </button>
-                      <p className="text-sm text-gray-800 mb-1 pr-6">{announcement.text}</p>
-                      <p className="text-xs text-gray-500">
-                        — {senderName} • {date}
-                      </p>
-                    </div>
-                  );
-                })}
-            </div>
           </div>
         )}
         

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { database } from './firebaseConfig';
 import { ref, set, get, onValue, update } from 'firebase/database';
-import { Calendar, Check, Trophy, Users, BookOpen, Flame, Clock, Sparkles, PlusCircle, Trash2, User, Share2, Globe, Send, Bell } from 'lucide-react';
+import { Calendar, Check, Trophy, Users, BookOpen, Flame, Clock, Sparkles, PlusCircle, Trash2, User, Share2, Globe, Send, Bell, X } from 'lucide-react';
 
 // Translation system
 const TRANSLATIONS = {
@@ -1403,6 +1403,7 @@ function App() {
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [announcementInput, setAnnouncementInput] = useState('');
   const [announcements, setAnnouncements] = useState([]);
+  const [dismissedAnnouncements, setDismissedAnnouncements] = useState([]);
   const [theme, setTheme] = useState('purple-blue'); // Default theme
   const [language, setLanguage] = useState('en'); // Default language
   const [completedChapters, setCompletedChapters] = useState({}); // { 'date': ['Book Chapter', ...] }
@@ -2657,32 +2658,41 @@ function App() {
         )}
         
         {/* Announcements Display */}
-        {announcements.length > 0 && (
+        {announcements.filter(a => !dismissedAnnouncements.includes(a.id)).length > 0 && (
           <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border-2 border-blue-200">
             <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
               <Bell size={16} />
               📢 Announcements
             </h3>
             <div className="space-y-3">
-              {announcements.map(announcement => {
-                const senderData = users.find(u => u.id === announcement.sender);
-                const senderName = senderData?.name || 'Admin';
-                const date = new Date(announcement.date).toLocaleDateString('en-US', { 
-                  month: 'short', 
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                });
-                
-                return (
-                  <div key={announcement.id} className="bg-white p-3 rounded-xl border border-blue-200">
-                    <p className="text-sm text-gray-800 mb-1">{announcement.text}</p>
-                    <p className="text-xs text-gray-500">
-                      — {senderName} • {date}
-                    </p>
-                  </div>
-                );
-              })}
+              {announcements
+                .filter(a => !dismissedAnnouncements.includes(a.id))
+                .map(announcement => {
+                  const senderData = users.find(u => u.id === announcement.sender);
+                  const senderName = senderData?.name || 'Admin';
+                  const date = new Date(announcement.date).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+                  
+                  return (
+                    <div key={announcement.id} className="bg-white p-3 rounded-xl border border-blue-200 relative">
+                      <button
+                        onClick={() => setDismissedAnnouncements([...dismissedAnnouncements, announcement.id])}
+                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition"
+                        aria-label="Close announcement"
+                      >
+                        <X size={16} />
+                      </button>
+                      <p className="text-sm text-gray-800 mb-1 pr-6">{announcement.text}</p>
+                      <p className="text-xs text-gray-500">
+                        — {senderName} • {date}
+                      </p>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         )}

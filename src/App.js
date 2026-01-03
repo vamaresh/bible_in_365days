@@ -2755,6 +2755,64 @@ function App() {
             
             {showAdminTools && (
               <div className="mt-4 space-y-4">
+                <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl border-2 border-orange-200">
+                  <h3 className="text-sm font-bold text-orange-800 mb-3 flex items-center gap-2">
+                    <Trophy size={16} />
+                    🔧 Fix All Users Data
+                  </h3>
+                  <p className="text-xs text-gray-700 mb-3">
+                    This will sync days with chapters for all users (days = chapters/4)
+                  </p>
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm('Fix all users data? This will update completedDates for everyone where days ≠ chapters/4')) return;
+                      
+                      const usersRef = ref(database, 'users');
+                      const snapshot = await get(usersRef);
+                      const data = snapshot.val();
+                      
+                      if (!data) {
+                        alert('No users found');
+                        return;
+                      }
+                      
+                      let fixed = 0;
+                      for (const userId of Object.keys(data)) {
+                        const userData = data[userId];
+                        const completedDates = userData.completedDates || [];
+                        const currentTotal = userData.totalChapters || 0;
+                        const expectedDays = Math.floor(currentTotal / 4);
+                        const actualDays = completedDates.length;
+                        
+                        if (currentTotal > 0 && expectedDays !== actualDays) {
+                          const newCompletedDates = [];
+                          const startDate = new Date('2026-01-01');
+                          for (let i = 0; i < expectedDays; i++) {
+                            const date = new Date(startDate);
+                            date.setDate(startDate.getDate() + i);
+                            newCompletedDates.push(date.toISOString().split('T')[0]);
+                          }
+                          
+                          const userRef = ref(database, `users/${userId}`);
+                          await update(userRef, { 
+                            completedDates: newCompletedDates,
+                            streak: expectedDays
+                          });
+                          console.log(`Fixed ${userId}: ${currentTotal} chapters → ${expectedDays} days (was ${actualDays})`);
+                          fixed++;
+                        }
+                      }
+                      
+                      alert(`✅ Fixed ${fixed} users!`);
+                      loadData(); // Reload data
+                    }}
+                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-2xl font-semibold hover:from-orange-600 hover:to-red-600 transition shadow flex items-center justify-center gap-2"
+                  >
+                    <Trophy size={16} />
+                    Fix All Users Now
+                  </button>
+                </div>
+                
                 <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border-2 border-blue-200">
                   <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
                     <Send size={16} />

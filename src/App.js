@@ -1411,6 +1411,7 @@ function App() {
   const [showAdminTools, setShowAdminTools] = useState(false);
   const [showFixChapterCount, setShowFixChapterCount] = useState(false);
   const [showBadgeExplanation, setShowBadgeExplanation] = useState(false);
+  const [showLogExtraReading, setShowLogExtraReading] = useState(false);
 
   // Translation hook
   const { t } = useTranslation(language);
@@ -3007,15 +3008,23 @@ function App() {
           </div>
         </div>
 
-        <div className="mb-6 space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-              <PlusCircle className="text-green-600" />
+        <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200">
+          <button
+            onClick={() => setShowLogExtraReading(!showLogExtraReading)}
+            className="w-full flex items-center justify-between text-left mb-3"
+          >
+            <h3 className="text-sm font-bold text-green-800 flex items-center gap-2">
+              <PlusCircle size={16} />
               Log Extra Reading
-            </label>
-            <p className="text-xs text-gray-500 mb-3">
-              Read more than the scheduled chapters today? Add them here so your progress reflects the extra effort.
-            </p>
+            </h3>
+            <span className="text-green-800 font-bold text-lg">{showLogExtraReading ? '▲' : '▼'}</span>
+          </button>
+          {showLogExtraReading && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-green-700 mb-3">
+                  Read more than the scheduled chapters today? Add them here so your progress reflects the extra effort.
+                </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <input
                 type="number"
@@ -3074,6 +3083,8 @@ function App() {
               <p className="text-xs text-gray-400 mt-2">
                 This will only remove from your bonus chapters count.
               </p>
+            </div>
+          )}
             </div>
           )}
         </div>

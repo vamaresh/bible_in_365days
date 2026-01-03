@@ -1492,30 +1492,29 @@ function App() {
             }
           }
           
-          // Fix users who have chapters but no dates (from the data wipe)
-          // Run this every time to catch anyone who still has the issue
-          if (currentTotal > 0 && completedDates.length === 0) {
-            // Estimate completed dates based on chapter count (4 chapters per day)
-            const estimatedDays = Math.floor(currentTotal / 4);
-            if (estimatedDays > 0) {
-              const newCompletedDates = [];
-              const startDate = new Date('2026-01-01');
-              for (let i = 0; i < estimatedDays; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                newCompletedDates.push(date.toISOString().split('T')[0]);
-              }
-              
-              const userRef = ref(database, `users/${userId}`);
-              try {
-                await update(userRef, { 
-                  completedDates: newCompletedDates,
-                  streak: estimatedDays // Use actual consecutive days if they're sequential from day 1
-                });
-                console.log(`Fixed dates for ${userId}: Added ${estimatedDays} dates, totalChapters: ${currentTotal}`);
-              } catch (error) {
-                console.error(`Error fixing dates for ${userId}:`, error);
-              }
+          // Fix: Ensure days matches chapters (chapters/4 should equal days)
+          const expectedDays = Math.floor(currentTotal / 4);
+          const actualDays = completedDates.length;
+          
+          if (currentTotal > 0 && expectedDays !== actualDays) {
+            // Days don't match chapters, fix it
+            const newCompletedDates = [];
+            const startDate = new Date('2026-01-01');
+            for (let i = 0; i < expectedDays; i++) {
+              const date = new Date(startDate);
+              date.setDate(startDate.getDate() + i);
+              newCompletedDates.push(date.toISOString().split('T')[0]);
+            }
+            
+            const userRef = ref(database, `users/${userId}`);
+            try {
+              await update(userRef, { 
+                completedDates: newCompletedDates,
+                streak: expectedDays
+              });
+              console.log(`Fixed mismatch for ${userId}: ${currentTotal} chapters → ${expectedDays} days (was ${actualDays} days)`);
+            } catch (error) {
+              console.error(`Error fixing mismatch for ${userId}:`, error);
             }
           }
         });

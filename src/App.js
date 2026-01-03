@@ -2626,7 +2626,7 @@ function App() {
             const todaysReading = getReadingForDay(currentDayNumber);
             const todaysChapterKeys = todaysReading.map(({ book, chapter }) => `${book} ${chapter}`);
             
-            // Find who completed TODAY'S scheduled reading first
+            // Find who completed TODAY'S scheduled reading first (earliest timestamp)
             const usersWithTimestamps = users
               .filter(u => {
                 // Check if they completed today's date with timestamp from today
@@ -2643,7 +2643,13 @@ function App() {
                 
                 return completedTodaysReading && hasEnoughDays;
               })
-              .sort((a, b) => (a.completionTimestamps[today] || 0) - (b.completionTimestamps[today] || 0));
+              .sort((a, b) => {
+                // Sort by timestamp ASCENDING (smallest/earliest first)
+                const timeA = a.completionTimestamps[today] || Infinity;
+                const timeB = b.completionTimestamps[today] || Infinity;
+                return timeA - timeB; // Negative result means A comes first (earlier)
+              });
+            // First element has the EARLIEST (smallest) timestamp
             const firstTodayUserId = usersWithTimestamps.length > 0 ? usersWithTimestamps[0].id : null;
             
             return [...users].sort((a, b) => (b.totalChapters || 0) - (a.totalChapters || 0)).map((user, idx) => {

@@ -1493,7 +1493,7 @@ function App() {
           }
           
           // Fix users who have chapters but no dates (from the data wipe)
-          // Check both: no completedChapters structure OR has totalChapters but no dates
+          // Run this every time to catch anyone who still has the issue
           if (currentTotal > 0 && completedDates.length === 0) {
             // Estimate completed dates based on chapter count (4 chapters per day)
             const estimatedDays = Math.floor(currentTotal / 4);
@@ -1510,9 +1510,9 @@ function App() {
               try {
                 await update(userRef, { 
                   completedDates: newCompletedDates,
-                  streak: newCompletedDates.length 
+                  streak: estimatedDays // Use actual consecutive days if they're sequential from day 1
                 });
-                console.log(`Fixed dates for ${userId}: Added ${estimatedDays} dates`);
+                console.log(`Fixed dates for ${userId}: Added ${estimatedDays} dates, totalChapters: ${currentTotal}`);
               } catch (error) {
                 console.error(`Error fixing dates for ${userId}:`, error);
               }
@@ -2620,15 +2620,21 @@ function App() {
             const today = new Date().toISOString().split('T')[0];
             const currentDayNumber = Math.floor((now - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
             
-            // Find who completed TODAY'S scheduled reading first (not catch-up)
+            // Get today's scheduled reading
+            const todaysReading = getReadingForDay(currentDayNumber);
+            const todaysChapterKeys = todaysReading.map(({ book, chapter }) => `${book} ${chapter}`);
+            
+            // Find who completed TODAY'S scheduled reading first
             const usersWithTimestamps = users
               .filter(u => {
-                // Only count if they completed today's date AND timestamp is from today
+                // Check if they completed today's date with timestamp from today
                 if (!u.completionTimestamps?.[today] || u.completionTimestamps[today] < todayMidnight) {
                   return false;
                 }
-                // Check if today's date is actually today (not a catch-up)
-                return u.completedDates?.includes(today);
+                // Verify they actually completed TODAY's scheduled chapters
+                const userTodayChapters = u.completedChapters?.[today] || [];
+                const completedTodaysReading = todaysChapterKeys.every(ch => userTodayChapters.includes(ch));
+                return completedTodaysReading;
               })
               .sort((a, b) => (a.completionTimestamps[today] || 0) - (b.completionTimestamps[today] || 0));
             const firstTodayUserId = usersWithTimestamps.length > 0 ? usersWithTimestamps[0].id : null;
@@ -2637,7 +2643,10 @@ function App() {
               const userProgress = (Math.round(getProgress(user.id) * 10) / 10).toFixed(1);
               const badgeLabel = getCommunityBadgeLabel(userProgress, user.completedDates?.length || 0);
               const isFirstToday = user.id === firstTodayUserId;
-              const hasCompletedToday = user.completedDates?.includes(today);
+              
+              // Check if user completed today's scheduled reading (not just any reading today)
+              const userTodayChapters = user.completedChapters?.[today] || [];
+              const hasCompletedToday = todaysChapterKeys.every(ch => userTodayChapters.includes(ch));
               
               return (
                 <div key={user.id} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 border-2 border-purple-100">

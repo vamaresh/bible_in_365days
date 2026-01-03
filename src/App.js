@@ -2635,7 +2635,12 @@ function App() {
                 // Verify they actually completed TODAY's scheduled chapters
                 const userTodayChapters = u.completedChapters?.[today] || [];
                 const completedTodaysReading = todaysChapterKeys.every(ch => userTodayChapters.includes(ch));
-                return completedTodaysReading;
+                
+                // Also verify they have at least currentDayNumber days completed (to prevent catch-up readers from getting the badge)
+                const userDaysCompleted = u.completedDates?.length || 0;
+                const hasEnoughDays = userDaysCompleted >= currentDayNumber;
+                
+                return completedTodaysReading && hasEnoughDays;
               })
               .sort((a, b) => (a.completionTimestamps[today] || 0) - (b.completionTimestamps[today] || 0));
             const firstTodayUserId = usersWithTimestamps.length > 0 ? usersWithTimestamps[0].id : null;

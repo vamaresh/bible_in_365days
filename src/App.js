@@ -1493,7 +1493,8 @@ function App() {
           }
           
           // Fix users who have chapters but no dates (from the data wipe)
-          if (currentTotal > 0 && completedDates.length === 0 && Object.keys(completedChapters).length === 0) {
+          // Check both: no completedChapters structure OR has totalChapters but no dates
+          if (currentTotal > 0 && completedDates.length === 0) {
             // Estimate completed dates based on chapter count (4 chapters per day)
             const estimatedDays = Math.floor(currentTotal / 4);
             if (estimatedDays > 0) {
@@ -1799,8 +1800,14 @@ function App() {
       
       // Update completedDates based on whether all chapters are done
       let newCompletedDates = completedDates;
+      const completionTimestamps = userData.completionTimestamps || {};
+      
       if (allCompleted && !completedDates.includes(dateStr)) {
         newCompletedDates = [...completedDates, dateStr];
+        // Track completion timestamp for daily badges
+        if (!completionTimestamps[dateStr]) {
+          completionTimestamps[dateStr] = Date.now();
+        }
       } else if (!allCompleted && completedDates.includes(dateStr)) {
         newCompletedDates = completedDates.filter(d => d !== dateStr);
       }
@@ -1810,7 +1817,8 @@ function App() {
         completedChapters: newChaptersData,
         completedDates: newCompletedDates,
         totalChapters: totalChaptersFromDates + (userData.extraChapters || 0),
-        streak: calculateStreak(newCompletedDates)
+        streak: calculateStreak(newCompletedDates),
+        completionTimestamps: completionTimestamps
       });
     } catch (error) {
       console.error('Error toggling chapter:', error);
@@ -2606,12 +2614,22 @@ function App() {
         </div>
         <div className="space-y-3">
           {(() => {
-            // Find who completed today first (from midnight UTC)
+            // Calculate today's date and day number in the challenge
             const now = new Date();
             const todayMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
             const today = new Date().toISOString().split('T')[0];
+            const currentDayNumber = Math.floor((now - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
+            
+            // Find who completed TODAY'S scheduled reading first (not catch-up)
             const usersWithTimestamps = users
-              .filter(u => u.completionTimestamps?.[today] && u.completionTimestamps[today] >= todayMidnight)
+              .filter(u => {
+                // Only count if they completed today's date AND timestamp is from today
+                if (!u.completionTimestamps?.[today] || u.completionTimestamps[today] < todayMidnight) {
+                  return false;
+                }
+                // Check if today's date is actually today (not a catch-up)
+                return u.completedDates?.includes(today);
+              })
               .sort((a, b) => (a.completionTimestamps[today] || 0) - (b.completionTimestamps[today] || 0));
             const firstTodayUserId = usersWithTimestamps.length > 0 ? usersWithTimestamps[0].id : null;
             
@@ -2619,6 +2637,7 @@ function App() {
               const userProgress = (Math.round(getProgress(user.id) * 10) / 10).toFixed(1);
               const badgeLabel = getCommunityBadgeLabel(userProgress, user.completedDates?.length || 0);
               const isFirstToday = user.id === firstTodayUserId;
+              const hasCompletedToday = user.completedDates?.includes(today);
               
               return (
                 <div key={user.id} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 border-2 border-purple-100">
@@ -2629,8 +2648,13 @@ function App() {
                       {idx === 2 && <Trophy className="text-orange-400" size={20} />}
                       <span className="font-bold text-gray-800">{user.name}</span>
                       {isFirstToday && (
-                        <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-2 py-1 rounded-full font-bold" title="First to complete today!">
+                        <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-2 py-1 rounded-full font-bold" title="First to complete today's challenge!">
                           🥇 1st Today
+                        </span>
+                      )}
+                      {!isFirstToday && hasCompletedToday && (
+                        <span className="text-xs bg-gradient-to-r from-green-400 to-emerald-400 text-white px-2 py-1 rounded-full font-bold" title="Completed today's challenge!">
+                          ✅ Done Today
                         </span>
                       )}
                       {badgeLabel && (

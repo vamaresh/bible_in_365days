@@ -1409,6 +1409,8 @@ function App() {
   const [completedChapters, setCompletedChapters] = useState({}); // { 'date': ['Book Chapter', ...] }
   const [showCatchUp, setShowCatchUp] = useState(false);
   const [showAdminTools, setShowAdminTools] = useState(false);
+  const [showFixChapterCount, setShowFixChapterCount] = useState(false);
+  const [showBadgeExplanation, setShowBadgeExplanation] = useState(false);
 
   // Translation hook
   const { t } = useTranslation(language);
@@ -2656,8 +2658,8 @@ function App() {
                       {idx === 2 && <Trophy className="text-orange-400" size={20} />}
                       <span className="font-bold text-gray-800">{user.name}</span>
                       {isFirstToday && (
-                        <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-2 py-1 rounded-full font-bold" title="First to complete today's challenge!">
-                          🥇 1st Today
+                        <span className="text-xl" title="First to complete today's challenge!">
+                          🏆
                         </span>
                       )}
                       {!isFirstToday && hasCompletedToday && (
@@ -3072,14 +3074,22 @@ function App() {
         </div>
 
         <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border-2 border-red-200">
-          <h3 className="text-sm font-bold text-red-800 mb-3 flex items-center gap-2">
-            <Trophy size={16} />
-            🔧 Fix Chapter Count
-          </h3>
-          <p className="text-xs text-red-700 mb-3">
-            If your chapter count is incorrect, use one of these options:
-          </p>
-          <div className="space-y-2">
+          <button
+            onClick={() => setShowFixChapterCount(!showFixChapterCount)}
+            className="w-full flex items-center justify-between text-left"
+          >
+            <h3 className="text-sm font-bold text-red-800 flex items-center gap-2">
+              <Trophy size={16} />
+              🔧 Fix Chapter Count
+            </h3>
+            <span className="text-red-800 font-bold text-lg">{showFixChapterCount ? '▲' : '▼'}</span>
+          </button>
+          {showFixChapterCount && (
+            <>
+              <p className="text-xs text-red-700 mb-3 mt-3">
+                If your chapter count is incorrect, use one of these options:
+              </p>
+              <div className="space-y-2">
             <button
               onClick={async () => {
                 const userRef = ref(database, `users/${currentUser}`);
@@ -3161,7 +3171,56 @@ function App() {
             >
               ⚠️ Reset ALL Progress to 0
             </button>
-          </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl border-2 border-purple-200">
+          <button
+            onClick={() => setShowBadgeExplanation(!showBadgeExplanation)}
+            className="w-full flex items-center justify-between text-left"
+          >
+            <h3 className="text-sm font-bold text-purple-800 flex items-center gap-2">
+              <Trophy size={16} />
+              🏆 Badge Meanings
+            </h3>
+            <span className="text-purple-800 font-bold text-lg">{showBadgeExplanation ? '▲' : '▼'}</span>
+          </button>
+          {showBadgeExplanation && (
+            <div className="mt-3 space-y-2 text-xs text-purple-700">
+              <div className="flex items-start gap-2">
+                <span className="text-base">✅</span>
+                <div>
+                  <span className="font-semibold">Green Checkmark:</span> Completed today's scheduled chapters
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-base">🏆</span>
+                <div>
+                  <span className="font-semibold">Golden Trophy:</span> First person to complete today's challenge
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-base">🌱</span>
+                <div>
+                  <span className="font-semibold">Seedling:</span> Faithful Start - First day completed
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-base">🔥</span>
+                <div>
+                  <span className="font-semibold">Fire:</span> On fire - 7+ day streak
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-base">🏆</span>
+                <div>
+                  <span className="font-semibold">Trophy Icons (Gold/Silver/Bronze):</span> Top 3 positions on leaderboard
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 border-t border-gray-200 pt-4">

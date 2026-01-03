@@ -2662,7 +2662,7 @@ function App() {
                       )}
                       {!isFirstToday && hasCompletedToday && (
                         <span className="text-xs bg-gradient-to-r from-green-400 to-emerald-400 text-white px-2 py-1 rounded-full font-bold" title="Completed today's challenge!">
-                          ✅ Done Today
+                          ✅
                         </span>
                       )}
                       {badgeLabel && (

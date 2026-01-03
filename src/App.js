@@ -2765,7 +2765,7 @@ function App() {
                   </p>
                   <button
                     onClick={async () => {
-                      if (!window.confirm('Fix all users data? This will update completedDates for everyone where days ≠ chapters/4')) return;
+                      if (!window.confirm('Fix all users data? This will update completedDates and streak for everyone')) return;
                       
                       const usersRef = ref(database, 'users');
                       const snapshot = await get(usersRef);
@@ -2783,8 +2783,10 @@ function App() {
                         const currentTotal = userData.totalChapters || 0;
                         const expectedDays = Math.floor(currentTotal / 4);
                         const actualDays = completedDates.length;
+                        const currentStreak = userData.streak || 0;
                         
-                        if (currentTotal > 0 && expectedDays !== actualDays) {
+                        // Fix if days don't match OR streak is wrong
+                        if (currentTotal > 0 && (expectedDays !== actualDays || currentStreak !== expectedDays)) {
                           const newCompletedDates = [];
                           const startDate = new Date('2026-01-01');
                           for (let i = 0; i < expectedDays; i++) {
@@ -2798,7 +2800,7 @@ function App() {
                             completedDates: newCompletedDates,
                             streak: expectedDays
                           });
-                          console.log(`Fixed ${userId}: ${currentTotal} chapters → ${expectedDays} days (was ${actualDays})`);
+                          console.log(`Fixed ${userId}: ${currentTotal} chapters → ${expectedDays} days (was ${actualDays}), streak: ${expectedDays} (was ${currentStreak})`);
                           fixed++;
                         }
                       }

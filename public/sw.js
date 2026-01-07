@@ -100,3 +100,39 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// Handle incoming push messages and show notifications
+self.addEventListener('push', (event) => {
+  try {
+    const payload = event.data ? event.data.json() : { title: 'Bible Reminder', body: 'Time to read!' };
+    const title = payload.title || 'Bible Reminder';
+    const options = {
+      body: payload.body || 'Time to read!',
+      icon: '/logo192.png',
+      badge: '/logo192.png',
+      data: payload.data || {}
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (e) {
+    console.error('Push event error', e);
+  }
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const urlToOpen = new URL('/', self.location.origin).href;
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});

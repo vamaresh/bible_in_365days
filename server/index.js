@@ -44,15 +44,32 @@ app.get('/vapidPublicKey', (req, res) => {
 });
 
 // Save subscription (client will POST subscription object)
+// Subscribe endpoint expects { userId, reminderTime, tzOffsetMinutes, subscription }
 app.post('/subscribe', (req, res) => {
-  const subscription = req.body;
+  const { userId, reminderTime, tzOffsetMinutes, subscription } = req.body || {};
   if (!subscription || !subscription.endpoint) return res.status(400).send('Invalid subscription');
+  if (!userId) return res.status(400).send('Missing userId');
+
   const subs = readSubs();
-  // avoid duplicates
-  if (!subs.find(s => s.endpoint === subscription.endpoint)) {
-    subs.push(subscription);
-    writeSubs(subs);
+  // find or create record for this endpoint
+  const existing = subs.find(s => s.endpoint === subscription.endpoint);
+  const record = {
+    userId,
+    endpoint: subscription.endpoint,
+    subscription,
+    reminderTime: reminderTime || null,
+    tzOffsetMinutes: typeof tzOffsetMinutes === 'number' ? tzOffsetMinutes : 0,
+    lastSentDate: existing ? existing.lastSentDate : null
+  };
+
+  if (existing) {
+    // update existing
+    Object.assign(existing, record);
+  } else {
+    subs.push(record);
   }
+
+  writeSubs(subs);
   res.json({ success: true });
 });
 
@@ -72,6 +89,45 @@ app.post('/send', async (req, res) => {
   }
   res.json({ results });
 });
+
+// Scheduler: check subscriptions every minute and send reminders when user's local time matches reminderTime
+setInterval(async () => {
+  try {
+    const subs = readSubs();
+    if (!subs.length) return;
+
+    const nowUtc = new Date();
+    const results = [];
+
+    for (const s of subs) {
+      if (!s.reminderTime) continue;
+      // compute user's local time by applying tz offset (minutes). tzOffsetMinutes is minutes ahead of UTC
+      const userNow = new Date(nowUtc.getTime() + (s.tzOffsetMinutes || 0) * 60000);
+      const hh = String(userNow.getHours()).padStart(2, '0');
+      const mm = String(userNow.getMinutes()).padStart(2, '0');
+      const timeStr = `${hh}:${mm}`;
+
+      // send only once per day - check lastSentDate
+      const todayStr = userNow.toISOString().split('T')[0];
+      if (timeStr === s.reminderTime && s.lastSentDate !== todayStr) {
+        try {
+          const payload = JSON.stringify({ title: 'Bible Challenge Reminder', body: `Time to read!` });
+          await webpush.sendNotification(s.subscription, payload);
+          s.lastSentDate = todayStr;
+          results.push({ endpoint: s.endpoint, status: 'sent' });
+        } catch (err) {
+          results.push({ endpoint: s.endpoint, status: 'error', error: err.message });
+        }
+      }
+    }
+    if (results.length) writeSubs(readSubs().map(sub => {
+      const found = subs.find(s => s.endpoint === sub.endpoint);
+      return found || sub;
+    }));
+  } catch (e) {
+    console.error('Scheduler error', e);
+  }
+}, 60 * 1000);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

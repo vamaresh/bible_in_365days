@@ -1495,6 +1495,49 @@ function App() {
     };
   }, [reminderTime, currentUser, users]);
 
+  // Register push subscription with server (store per-user) when service worker ready and permission granted
+  useEffect(() => {
+    if (!currentUser) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    let mounted = true;
+
+    const registerPush = async () => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const existing = await reg.pushManager.getSubscription();
+        // ask server for vapid key
+        const vapidRes = await fetch('/vapidPublicKey');
+        if (!vapidRes.ok) return;
+        const { publicKey } = await vapidRes.json();
+
+        const applicationServerKey = publicKey ? urlBase64ToUint8Array(publicKey) : null;
+
+        let sub = existing;
+        if (!existing) {
+          sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+        }
+
+        if (sub && mounted) {
+          const tzOffsetMinutes = -new Date().getTimezoneOffset();
+          await fetch('/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: currentUser, reminderTime: reminderTime || '07:00', tzOffsetMinutes, subscription: sub })
+          });
+          console.log('Registered push subscription for user', currentUser);
+        }
+      } catch (e) {
+        console.warn('Push register failed', e);
+      }
+    };
+
+    registerPush();
+
+    return () => { mounted = false; };
+  }, [currentUser, reminderTime]);
+
   const loadAnnouncements = () => {
     const announcementsRef = ref(database, 'announcements');
     

@@ -92,50 +92,7 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
-(async function tryPushSubscribe() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    // Only attempt if permission granted
-    if (Notification.permission !== 'granted') return;
-    // Ask server for VAPID public key
-    let pubRes;
-    try {
-      pubRes = await fetch('/vapidPublicKey');
-    } catch (e) {
-      console.warn('No push server available at /vapidPublicKey');
-      return;
-    }
-    if (!pubRes.ok) return;
-    const { publicKey } = await pubRes.json();
-    if (!publicKey) return;
-
-    const existing = await reg.pushManager.getSubscription();
-    if (existing) {
-      console.log('Already subscribed to push');
-      return;
-    }
-
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey)
-    });
-
-    try {
-      await fetch('/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub)
-      });
-      console.log('Push subscription sent to server');
-      localStorage.setItem('push_subscription', JSON.stringify(sub));
-    } catch (e) {
-      console.warn('Failed to send push subscription to server', e);
-    }
-  } catch (e) {
-    console.warn('Push subscribe failed', e);
-  }
-})();
+// Push subscription is handled in App.js where `currentUser` and `reminderTime` are available.
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

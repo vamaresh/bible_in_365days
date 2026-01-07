@@ -1412,6 +1412,7 @@ function App() {
   const [showFixChapterCount, setShowFixChapterCount] = useState(false);
   const [showBadgeExplanation, setShowBadgeExplanation] = useState(false);
   const [showLogExtraReading, setShowLogExtraReading] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState('default');
 
   // Translation hook
   const { t } = useTranslation(language);
@@ -1421,6 +1422,11 @@ function App() {
     loadAnnouncements();
     // Set daily verse based on current language
     setDailyVerse(getDailyVerse(language));
+    
+    // Check notification permission on load
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
     
     // Check if app is running as PWA or in browser
     const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
@@ -1445,6 +1451,49 @@ function App() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, [language]);
+
+  // Setup daily reminder notification
+  useEffect(() => {
+    if (!reminderTime || !currentUser) return;
+    
+    // Clear any existing interval
+    if (window.reminderInterval) {
+      clearInterval(window.reminderInterval);
+    }
+    
+    // Only setup if notifications are granted
+    if ('Notification' in window && Notification.permission === 'granted') {
+      // Check every minute if it's reminder time
+      window.reminderInterval = setInterval(() => {
+        const now = new Date();
+        const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        
+        if (currentTime === reminderTime) {
+          // Get current user data
+          const userData = users.find(u => u.id === currentUser);
+          const today = new Date().toISOString().split('T')[0];
+          const completed = userData?.completedDates?.includes(today);
+          
+          if (!completed) {
+            const dayNumber = Math.floor((now - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
+            new Notification('Bible Challenge Reminder', {
+              body: `Time to read Day ${dayNumber}'s chapters! 📖`,
+              icon: '/logo192.png',
+              badge: '/logo192.png',
+              tag: 'bible-reminder',
+              requireInteraction: false
+            });
+          }
+        }
+      }, 60000); // Check every minute
+    }
+    
+    return () => {
+      if (window.reminderInterval) {
+        clearInterval(window.reminderInterval);
+      }
+    };
+  }, [reminderTime, currentUser, users]);
 
   const loadAnnouncements = () => {
     const announcementsRef = ref(database, 'announcements');
@@ -1598,9 +1647,54 @@ function App() {
     const userRef = ref(database, `users/${currentUser}`);
     try {
       await update(userRef, { reminderTime: time || reminderTime });
+      // Request notification permission if not already granted
+      if ('Notification' in window && Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission);
+        if (permission === 'granted') {
+          alert('✅ Notifications enabled! You\'ll receive daily reminders at ' + (time || reminderTime));
+          // Start the reminder
+          scheduleDailyReminder(time || reminderTime);
+        }
+      } else if (Notification.permission === 'granted') {
+        // Permission already granted, just start the reminder
+        scheduleDailyReminder(time || reminderTime);
+      }
     } catch (error) {
       console.error('Error saving reminder:', error);
     }
+  };
+
+  const scheduleDailyReminder = (time) => {
+    // Clear any existing reminder check
+    if (window.reminderInterval) {
+      clearInterval(window.reminderInterval);
+    }
+    
+    // Check every minute if it's time to send reminder
+    window.reminderInterval = setInterval(() => {
+      const now = new Date();
+      const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+      
+      if (currentTime === time && 'Notification' in window && Notification.permission === 'granted') {
+        // Check if today's reading is not yet completed
+        const today = new Date().toISOString().split('T')[0];
+        // Get current user data from users array
+        const userData = users.find(u => u.id === currentUser);
+        const completed = userData?.completedDates?.includes(today);
+        
+        if (!completed) {
+          const dayNumber = Math.floor((now - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
+          new Notification('Bible Challenge Reminder', {
+            body: `Time to read Day ${dayNumber}'s chapters! 📖`,
+            icon: '/logo192.png',
+            badge: '/logo192.png',
+            tag: 'bible-reminder',
+            requireInteraction: false
+          });
+        }
+      }
+    }, 60000); // Check every minute
   };
 
   const sendAnnouncement = async () => {
@@ -1916,21 +2010,36 @@ function App() {
   };
 
   const calculateStreak = (completedDates) => {
-    if (!completedDates.length) return 0;
-    const sorted = [...completedDates].sort().reverse();
+    if (!completedDates || !completedDates.length) return 0;
+
+    // Normalize all entries to ISO date strings and use a Set for O(1) lookups
+    const normalizedSet = new Set(
+      completedDates.map(d => {
+        if (!d) return '';
+        if (typeof d === 'string') return d.split('T')[0];
+        try {
+          return new Date(d).toISOString().split('T')[0];
+        } catch (e) {
+          return '';
+        }
+      }).filter(Boolean)
+    );
+
     let streak = 0;
-    const today = clampDateToPlan(new Date());
-    
-    for (let i = 0; i < sorted.length; i++) {
-      const checkDate = new Date(today);
-      checkDate.setDate(checkDate.getDate() - i);
+    let checkDate = clampDateToPlan(new Date());
+
+    // Count consecutive days backwards from today while dates exist in the set
+    while (checkDate >= START_DATE) {
       const checkStr = checkDate.toISOString().split('T')[0];
-      if (sorted.includes(checkStr)) {
+      if (normalizedSet.has(checkStr)) {
         streak++;
+        // Move back one day (use UTC-safe method)
+        checkDate = new Date(Date.UTC(checkDate.getUTCFullYear(), checkDate.getUTCMonth(), checkDate.getUTCDate() - 1));
       } else {
         break;
       }
     }
+
     return streak;
   };
 

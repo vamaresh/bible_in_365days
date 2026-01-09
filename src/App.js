@@ -3,6 +3,9 @@ import { database } from './firebaseConfig';
 import { ref, set, get, onValue, update } from 'firebase/database';
 import { Calendar, Check, Trophy, Users, BookOpen, Flame, Clock, Sparkles, PlusCircle, Trash2, User, Share2, Globe, Send, Bell, X } from 'lucide-react';
 
+// OneSignal App ID - Get this from https://onesignal.com dashboard > Settings > Keys & IDs
+const ONESIGNAL_APP_ID = '4aceee22-b1f2-444b-8cae-557d9128bbf8';
+
 // Translation system
 const TRANSLATIONS = {
   en: {
@@ -1403,7 +1406,10 @@ function App() {
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [announcementInput, setAnnouncementInput] = useState('');
   const [announcements, setAnnouncements] = useState([]);
-  const [dismissedAnnouncements, setDismissedAnnouncements] = useState([]);
+  const [dismissedAnnouncements, setDismissedAnnouncements] = useState(() => {
+    const saved = localStorage.getItem('dismissedAnnouncements');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [theme, setTheme] = useState('purple-blue'); // Default theme
   const [language, setLanguage] = useState('en'); // Default language
   const [completedChapters, setCompletedChapters] = useState({}); // { 'date': ['Book Chapter', ...] }
@@ -1428,6 +1434,38 @@ function App() {
 
   // Translation hook
   const { t } = useTranslation(language);
+
+  // Initialize OneSignal
+  useEffect(() => {
+    if (ONESIGNAL_APP_ID && !window.OneSignalDeferred) {
+      // Load OneSignal SDK
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      const script = document.createElement('script');
+      script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+      script.defer = true;
+      document.head.appendChild(script);
+      
+      script.onload = () => {
+        window.OneSignalDeferred.push(async function(OneSignal) {
+          await OneSignal.init({
+            appId: ONESIGNAL_APP_ID,
+            allowLocalhostAsSecureOrigin: true
+          });
+          console.log('OneSignal initialized');
+          
+          // Set external user ID if user is already logged in
+          if (currentUser) {
+            try {
+              await OneSignal.login(currentUser);
+              console.log('Registered current user with OneSignal:', currentUser);
+            } catch (err) {
+              console.log('Login deferred, will set on next interaction:', err.message);
+            }
+          }
+        });
+      };
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     loadData();
@@ -1508,6 +1546,9 @@ function App() {
   }, [reminderTime, currentUser, users]);
 
   // Register push subscription with server (store per-user) when service worker ready and permission granted
+  // NOTE: This code is for the old server/Cloud Functions approach and is currently not being used.
+  // OneSignal is now handling push notifications. This can be removed once OneSignal is fully working.
+  /*
   useEffect(() => {
     if (!currentUser) return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -1519,8 +1560,8 @@ function App() {
       try {
         const reg = await navigator.serviceWorker.ready;
         const existing = await reg.pushManager.getSubscription();
-        // ask server for vapid key
-        const vapidRes = await fetch('/vapidPublicKey');
+        // ask server for vapid key - use Cloud Function URL
+        const vapidRes = await fetch('https://us-central1-bethel-bible-2026.cloudfunctions.net/getVapidPublicKey');
         if (!vapidRes.ok) return;
         const { publicKey } = await vapidRes.json();
 
@@ -1533,7 +1574,7 @@ function App() {
 
         if (sub && mounted) {
           const tzOffsetMinutes = -new Date().getTimezoneOffset();
-          await fetch('/subscribe', {
+          await fetch('https://us-central1-bethel-bible-2026.cloudfunctions.net/subscribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: currentUser, reminderTime: reminderTime || '07:00', tzOffsetMinutes, subscription: sub })
@@ -1549,6 +1590,7 @@ function App() {
 
     return () => { mounted = false; };
   }, [currentUser, reminderTime]);
+  */
 
   const loadAnnouncements = () => {
     const announcementsRef = ref(database, 'announcements');
@@ -1676,6 +1718,14 @@ function App() {
         localStorage.setItem(USER_STORAGE_KEY, sanitizedName);
         setReminderTime(userData.reminderTime || '07:00');
         setLanguage(userData.language || 'en'); // Load user's language preference
+        
+        // Link OneSignal user ID to this app user
+        if (window.OneSignalDeferred) {
+          window.OneSignalDeferred.push(function(OneSignal) {
+            OneSignal.login(sanitizedName);
+          });
+        }
+        
         setView('home');
       } else {
         const newUser = {
@@ -1690,6 +1740,14 @@ function App() {
         await set(userRef, newUser);
         setCurrentUser(sanitizedName);
         localStorage.setItem(USER_STORAGE_KEY, sanitizedName);
+        
+        // Link OneSignal user ID to this app user
+        if (window.OneSignalDeferred) {
+          window.OneSignalDeferred.push(function(OneSignal) {
+            OneSignal.login(sanitizedName);
+          });
+        }
+        
         setView('home');
       }
     } catch (error) {
@@ -1701,19 +1759,73 @@ function App() {
   const saveReminderTime = async (time) => {
     const userRef = ref(database, `users/${currentUser}`);
     try {
-      await update(userRef, { reminderTime: time || reminderTime });
-      // Request notification permission if not already granted
-      if ('Notification' in window && Notification.permission === 'default') {
-        const permission = await Notification.requestPermission();
-        setNotificationPermission(permission);
-        if (permission === 'granted') {
-          alert('✅ Notifications enabled! You\'ll receive daily reminders at ' + (time || reminderTime));
-          // Start the reminder
-          scheduleDailyReminder(time || reminderTime);
+      // Save reminder time and timezone offset
+      const tzOffsetMinutes = -new Date().getTimezoneOffset();
+      await update(userRef, { 
+        reminderTime: time || reminderTime,
+        tzOffsetMinutes: tzOffsetMinutes
+      });
+      
+      // Request OneSignal subscription for push notifications
+      if (window.OneSignalDeferred) {
+        window.OneSignalDeferred.push(async function(OneSignal) {
+          try {
+            // First, ensure user is logged in to OneSignal
+            try {
+              await OneSignal.login(currentUser);
+              console.log('User logged in to OneSignal:', currentUser);
+            } catch (loginErr) {
+              console.log('User already logged in or login not needed:', loginErr.message);
+            }
+            
+            // Show OneSignal's permission prompt slidedown
+            await OneSignal.Slidedown.promptPush();
+            
+            // Wait for user to respond to the prompt
+            setTimeout(async () => {
+              const isPushSupported = await OneSignal.Notifications.isPushSupported();
+              const permission = await OneSignal.Notifications.permission;
+              
+              console.log('Push supported:', isPushSupported);
+              console.log('Permission:', permission);
+              
+              if (permission) {
+                // Tag user with their reminder time
+                await OneSignal.User.addTags({
+                  reminderTime: time || reminderTime,
+                  userId: currentUser,
+                  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                });
+                
+                console.log('OneSignal subscription successful');
+                alert('✅ Notifications enabled! You\'ll receive daily reminders at ' + (time || reminderTime));
+                
+                // Start the in-app reminder (fallback)
+                scheduleDailyReminder(time || reminderTime);
+              } else {
+                alert('⚠️ Please allow notifications to receive reminders');
+              }
+            }, 1000);
+          } catch (err) {
+            console.error('OneSignal setup failed:', err);
+            // Fallback to just in-app notifications
+            if ('Notification' in window && Notification.permission === 'granted') {
+              alert('✅ In-app notifications enabled at ' + (time || reminderTime));
+              scheduleDailyReminder(time || reminderTime);
+            } else {
+              alert('⚠️ Notification setup failed: ' + err.message);
+            }
+          }
+        });
+      } else {
+        // OneSignal not loaded, use in-app fallback
+        if ('Notification' in window) {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            alert('✅ In-app notifications enabled at ' + (time || reminderTime));
+            scheduleDailyReminder(time || reminderTime);
+          }
         }
-      } else if (Notification.permission === 'granted') {
-        // Permission already granted, just start the reminder
-        scheduleDailyReminder(time || reminderTime);
       }
     } catch (error) {
       console.error('Error saving reminder:', error);
@@ -2421,7 +2533,11 @@ function App() {
                       return (
                         <div key={announcement.id} className="bg-white p-3 rounded-xl border border-blue-200 relative">
                           <button
-                            onClick={() => setDismissedAnnouncements([...dismissedAnnouncements, announcement.id])}
+                            onClick={() => {
+                              const newDismissed = [...dismissedAnnouncements, announcement.id];
+                              setDismissedAnnouncements(newDismissed);
+                              localStorage.setItem('dismissedAnnouncements', JSON.stringify(newDismissed));
+                            }}
                             className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition"
                             aria-label="Close announcement"
                           >
@@ -3056,34 +3172,6 @@ function App() {
               Set your preferred daily reading time. You'll be reminded to complete your reading.
             </p>
           </div>
-        </div>
-
-        <div className="p-4 bg-blue-50 rounded-2xl">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-blue-800 font-semibold">
-              💡 Daily Reminder Notifications
-            </p>
-          </div>
-          <p className="text-xs text-blue-700 mb-3">
-            Get notified at your set reading time to stay on track!
-          </p>
-          <button
-            onClick={async () => {
-              if ('Notification' in window) {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                  alert('✅ Notifications enabled! You\'ll receive daily reminders.');
-                } else {
-                  alert('❌ Notifications blocked. Please enable them in your browser settings.');
-                }
-              } else {
-                alert('Notifications are not supported in your browser.');
-              }
-            }}
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-2.5 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition shadow text-sm"
-          >
-            Enable Notifications
-          </button>
         </div>
 
         <div className="p-4 bg-green-50 rounded-2xl">

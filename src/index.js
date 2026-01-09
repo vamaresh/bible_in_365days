@@ -11,43 +11,9 @@ root.render(
   </React.StrictMode>
 );
 
-// Register service worker for PWA functionality
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // Unregister old service workers and force reload
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      for (let registration of registrations) {
-        registration.unregister().then(() => {
-          console.log('Old SW unregistered');
-        });
-      }
-    });
-    
-    // Clear all caches
-    if ('caches' in window) {
-      caches.keys().then((names) => {
-        names.forEach((name) => {
-          caches.delete(name);
-          console.log('Cache deleted:', name);
-        });
-      });
-    }
-    
-    // Register new service worker
-    setTimeout(() => {
-      navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          console.log('SW registered successfully:', registration);
-          console.log('SW scope:', registration.scope);
-        })
-        .catch((error) => {
-          console.error('SW registration failed:', error);
-        });
-    }, 1000);
-  });
-} else {
-  console.log('Service workers not supported');
-}
+// Note: Service worker is now handled by OneSignal SDK
+// OneSignal automatically registers OneSignalSDKWorker.js for push notifications
+// We no longer use a custom service worker to avoid conflicts
 
 // Client-side app version check to force-refresh stubborn caches (iOS/Safari fallback)
 (async function checkAppVersion() {
@@ -67,11 +33,6 @@ if ('serviceWorker' in navigator) {
         const names = await caches.keys();
         await Promise.all(names.map(n => caches.delete(n)));
         console.log('Cleared caches due to new app version');
-      }
-      // unregister SWs and do a hard reload
-      if (navigator.serviceWorker) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map(r => r.unregister()));
       }
       window.location.reload(true);
     }

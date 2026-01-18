@@ -5,6 +5,57 @@ import * as logger from "firebase-functions/logger";
 admin.initializeApp();
 
 const ONESIGNAL_APP_ID = "4aceee22-b1f2-444b-8cae-557d9128bbf8";
+const ONESIGNAL_REST_API_KEY = "nl5ao5235eteul6fukytg7ehb";
+
+/**
+ * HTTP function to send push notification to all users
+ */
+export const sendPushToAll = functions.https.onCall(async (request) => {
+  const message = request.data.message;
+  const title = request.data.title || "Bible Challenge 2026 📖";
+
+  if (!message) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Message is required"
+    );
+  }
+
+  try {
+    const response = await fetch("https://onesignal.com/api/v1/notifications", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Basic ${ONESIGNAL_REST_API_KEY}`,
+      },
+      body: JSON.stringify({
+        app_id: ONESIGNAL_APP_ID,
+        included_segments: ["All"],
+        headings: {en: title},
+        contents: {en: message},
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      logger.error("OneSignal API error:", errorData);
+      throw new functions.https.HttpsError(
+        "internal",
+        `OneSignal API error: ${JSON.stringify(errorData)}`
+      );
+    }
+
+    const result = await response.json();
+    logger.info("Notification sent successfully:", result);
+    return {success: true, result};
+  } catch (error) {
+    logger.error("Error sending notification:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      `Error sending notification: ${error}`
+    );
+  }
+});
 
 /**
  * Scheduled function that runs every minute to check for users

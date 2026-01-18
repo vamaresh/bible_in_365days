@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { database } from './firebaseConfig';
+import { database, functions } from './firebaseConfig';
 import { ref, set, get, onValue, update } from 'firebase/database';
+import { httpsCallable } from 'firebase/functions';
 import { Calendar, Check, Trophy, Users, BookOpen, Flame, Clock, Sparkles, PlusCircle, Trash2, User, Share2, Globe, Send, Bell, X } from 'lucide-react';
 
 // OneSignal App ID - Get this from https://onesignal.com dashboard > Settings > Keys & IDs
@@ -1420,6 +1421,16 @@ function App() {
   const [showLogExtraReading, setShowLogExtraReading] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState('default');
 
+  // Simple mount effect - ensure loading is set to false quickly
+  useEffect(() => {
+    console.log('🚀 App mounted');
+    const quickTimeout = setTimeout(() => {
+      console.log('⚡ Setting loading to false');
+      setLoading(false);
+    }, 1000); // Just 1 second
+    return () => clearTimeout(quickTimeout);
+  }, []);
+
   // Helper to convert VAPID public key
   const urlBase64ToUint8Array = (base64String) => {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -1435,9 +1446,11 @@ function App() {
   // Translation hook
   const { t } = useTranslation(language);
 
-  // Initialize OneSignal
+  // Initialize OneSignal - DISABLED TEMPORARILY FOR DEBUGGING
+  /*
   useEffect(() => {
-    if (ONESIGNAL_APP_ID && !window.OneSignalDeferred) {
+    if (ONESIGNAL_APP_ID && !window.OneSignalInitialized) {
+      window.OneSignalInitialized = true;
       // Load OneSignal SDK
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       const script = document.createElement('script');
@@ -1452,26 +1465,52 @@ function App() {
             allowLocalhostAsSecureOrigin: true
           });
           console.log('OneSignal initialized');
-          
-          // Set external user ID if user is already logged in
-          if (currentUser) {
-            try {
-              await OneSignal.login(currentUser);
-              console.log('Registered current user with OneSignal:', currentUser);
-            } catch (err) {
-              console.log('Login deferred, will set on next interaction:', err.message);
-            }
-          }
         });
       };
     }
+  }, []);
+
+  // Handle user login to OneSignal
+  useEffect(() => {
+    if (currentUser && window.OneSignalDeferred) {
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        try {
+          await OneSignal.login(currentUser);
+          console.log('Registered current user with OneSignal:', currentUser);
+          
+          // Auto-prompt for push notifications after a short delay
+          setTimeout(async () => {
+            try {
+              const permission = await OneSignal.Notifications.permission;
+              if (!permission) {
+                // User hasn't granted permission yet, show the prompt
+                console.log('Auto-prompting user for push notifications...');
+                await OneSignal.Slidedown.promptPush();
+              }
+            } catch (err) {
+              console.log('Error prompting for notifications:', err.message);
+            }
+          }, 2000);
+        } catch (err) {
+          console.log('Login deferred, will set on next interaction:', err.message);
+        }
+      });
+    }
   }, [currentUser]);
+  */
 
   useEffect(() => {
+    console.log('🚀 Main useEffect triggered, language:', language);
     loadData();
     loadAnnouncements();
     // Set daily verse based on current language
     setDailyVerse(getDailyVerse(language));
+    
+    // Fallback timeout: if data doesn't load within 5 seconds, stop showing loading screen
+    const timeoutId = setTimeout(() => {
+      console.warn('⏰ Firebase data loading timeout (5s) - showing app anyway');
+      setLoading(false);
+    }, 5000);
     
     // Check notification permission on load
     if ('Notification' in window) {
@@ -1498,6 +1537,7 @@ function App() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, [language]);
@@ -1611,63 +1651,31 @@ function App() {
   };
 
   const loadData = () => {
+    console.log('🔄 loadData called - attempting to connect to Firebase...');
     const usersRef = ref(database, 'users');
 
     onValue(usersRef, (snapshot) => {
+      console.log('✅ Firebase onValue callback triggered');
       const data = snapshot.val();
+      console.log('📊 Firebase data received:', data ? `${Object.keys(data).length} users` : 'null/empty');
+      
       if (data) {
         const userList = Object.keys(data).map(key => ({
           ...data[key],
           id: key
         }));
         setUsers(userList);
-        
-        // Temporary auto-recovery: If totalChapters is 0 but user has completedDates, restore from dates
-        Object.keys(data).forEach(async (userId) => {
-          const userData = data[userId];
-          const completedDates = userData.completedDates || [];
-          const currentTotal = userData.totalChapters || 0;
-          const completedChapters = userData.completedChapters || {};
-          
-          // Only auto-recover if they have dates but totalChapters is 0
-          if (completedDates.length > 0 && currentTotal === 0) {
-            const recoveredTotal = completedDates.length * 4 + (userData.extraChapters || 0);
-            const userRef = ref(database, `users/${userId}`);
-            try {
-              await update(userRef, { totalChapters: recoveredTotal });
-              console.log(`Auto-recovered ${userId}: ${recoveredTotal} chapters from ${completedDates.length} days`);
-            } catch (error) {
-              console.error(`Error auto-recovering ${userId}:`, error);
-            }
-          }
-          
-          // Fix: Ensure days matches chapters (chapters/4 should equal days)
-          const expectedDays = Math.floor(currentTotal / 4);
-          const actualDays = completedDates.length;
-          
-          if (currentTotal > 0 && expectedDays !== actualDays) {
-            // Days don't match chapters, fix it
-            const newCompletedDates = [];
-            const startDate = new Date('2026-01-01');
-            for (let i = 0; i < expectedDays; i++) {
-              const date = new Date(startDate);
-              date.setDate(startDate.getDate() + i);
-              newCompletedDates.push(date.toISOString().split('T')[0]);
-            }
-            
-            const userRef = ref(database, `users/${userId}`);
-            try {
-              await update(userRef, { 
-                completedDates: newCompletedDates,
-                streak: expectedDays
-              });
-              console.log(`Fixed mismatch for ${userId}: ${currentTotal} chapters → ${expectedDays} days (was ${actualDays} days)`);
-            } catch (error) {
-              console.error(`Error fixing mismatch for ${userId}:`, error);
-            }
-          }
-        });
+      } else {
+        // No data in database, still set empty users array
+        console.log('⚠️ No data in Firebase, setting empty users array');
+        setUsers([]);
       }
+      console.log('✅ Setting loading to false');
+      setLoading(false);
+    }, (error) => {
+      // Handle errors - still set loading to false so app doesn't stay stuck
+      console.error('❌ Error loading data from Firebase:', error);
+      console.log('Setting loading to false due to error');
       setLoading(false);
     });
   };
@@ -1885,6 +1893,54 @@ function App() {
     } catch (error) {
       console.error('Error sending announcement:', error);
       alert('Failed to send announcement. Please try again.');
+    }
+  };
+
+  const sendPushNotification = async () => {
+    if (!announcementInput.trim()) {
+      alert('Please enter a message to send as push notification');
+      return;
+    }
+
+    try {
+      // Use Firebase Cloud Function to send notification
+      const sendPushToAll = httpsCallable(functions, 'sendPushToAll');
+      const result = await sendPushToAll({
+        message: announcementInput,
+        title: 'Bible Challenge 2026 📖'
+      });
+
+      if (result.data.success) {
+        alert('✅ Push notification sent to all subscribed users!');
+        setAnnouncementInput('');
+      } else {
+        alert('Failed to send notification');
+      }
+    } catch (error) {
+      console.error('Error sending push notification:', error);
+      alert('Failed to send push notification: ' + error.message);
+    }
+  };
+
+  const promptAllUsersForNotifications = async () => {
+    // This will prompt the current user to enable notifications
+    if (window.OneSignalDeferred) {
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        try {
+          const permission = await OneSignal.Notifications.permission;
+          if (!permission) {
+            await OneSignal.Slidedown.promptPush();
+            alert('Please allow notifications. Share this link with other users so they can also enable notifications when they open the app.');
+          } else {
+            alert('You already have notifications enabled! Other users will be prompted automatically when they next open the app.');
+          }
+        } catch (err) {
+          console.error('Error prompting for notifications:', err);
+          alert('Error prompting for notifications: ' + err.message);
+        }
+      });
+    } else {
+      alert('OneSignal not loaded yet. Please try again in a moment.');
     }
   };
 
@@ -3120,13 +3176,37 @@ function App() {
                     placeholder="Type your announcement message here..."
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-purple-500 focus:outline-none text-sm mb-3 min-h-[100px]"
                   />
-                  <button
-                    onClick={sendAnnouncement}
-                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-2xl font-semibold hover:from-blue-600 hover:to-purple-600 transition shadow flex items-center justify-center gap-2"
-                  >
-                    <Send size={16} />
-                    Send to Everyone
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      onClick={sendAnnouncement}
+                      className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-2xl font-semibold hover:from-blue-600 hover:to-purple-600 transition shadow flex items-center justify-center gap-2"
+                    >
+                      <Send size={16} />
+                      Send In-App Announcement
+                    </button>
+                    <button
+                      onClick={sendPushNotification}
+                      className="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white py-3 rounded-2xl font-semibold hover:from-green-600 hover:to-teal-600 transition shadow flex items-center justify-center gap-2"
+                    >
+                      <Bell size={16} />
+                      Send Push Notification to All
+                    </button>
+                  </div>
+                  <div className="mt-3 p-3 bg-yellow-50 rounded-xl border border-yellow-200">
+                    <p className="text-xs text-yellow-800 mb-2">
+                      💡 <strong>Note:</strong> Only {users.length} total users, but only subscribed users will receive push notifications.
+                    </p>
+                    <button
+                      onClick={promptAllUsersForNotifications}
+                      className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2 rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition shadow flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Bell size={14} />
+                      Enable My Notifications
+                    </button>
+                    <p className="text-xs text-yellow-700 mt-2">
+                      Users will be auto-prompted when they next open the app.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

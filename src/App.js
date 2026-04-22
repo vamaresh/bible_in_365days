@@ -2555,6 +2555,25 @@ function App() {
         </div>
       )}
 
+        {/* 🎁 PRIZE ANNOUNCEMENT BANNER */}
+        <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 rounded-3xl p-5 shadow-2xl border-4 border-yellow-300 mx-4 mb-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 text-6xl opacity-20">🏆</div>
+          <div className="absolute bottom-0 left-0 text-6xl opacity-20">🎁</div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <Trophy className="text-amber-900 animate-bounce" size={24} />
+              <h3 className="font-black text-amber-900 text-lg">🎉 SPECIAL PRIZES FOR WINNERS! 🎉</h3>
+            </div>
+            <p className="text-amber-900 font-semibold text-sm mb-2">
+              Complete the entire Bible reading challenge and win amazing rewards!
+            </p>
+            <div className="bg-white bg-opacity-50 rounded-xl p-3 backdrop-blur">
+              <p className="text-amber-900 text-xs font-bold mb-1">🥇 Top 3 Finishers get exclusive prizes!</p>
+              <p className="text-amber-800 text-xs">Stay consistent, climb the leaderboard, and earn your reward! 💪</p>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl p-6 shadow-md border-2 border-amber-200 mx-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="text-amber-600" size={20} />
@@ -2943,6 +2962,20 @@ function App() {
 
 {view === 'community' && (
       <div className="bg-white rounded-3xl shadow-lg p-6">
+        {/* 🏆 PRIZE BANNER FOR COMMUNITY PAGE */}
+        <div className="bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-2xl p-4 mb-6 shadow-xl text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 text-5xl opacity-20">🏆</div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <Trophy className="animate-bounce" size={20} />
+              <h3 className="font-black text-sm">TOP 3 WIN PRIZES!</h3>
+            </div>
+            <p className="text-xs opacity-90">
+              🥇🥈🥉 Top 3 finishers of the Bible Challenge will receive special rewards! Keep reading to win!
+            </p>
+          </div>
+        </div>
+        
         <div className="text-center mb-4 pb-4 border-b-2 border-gray-200">
           <h3 className="text-sm font-bold text-purple-600">Bible Challenge</h3>
           <h2 className="text-xl font-bold text-gray-800 flex items-center justify-center gap-2">
@@ -3346,85 +3379,15 @@ function App() {
           </div>
         </div>
 
-        <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200">
-          <button
-            onClick={() => setShowLogExtraReading(!showLogExtraReading)}
-            className="w-full flex items-center justify-between text-left mb-3"
-          >
-            <h3 className="text-sm font-bold text-green-800 flex items-center gap-2">
+        <div className="mb-6 p-4 bg-gray-100 rounded-2xl border-2 border-gray-200 opacity-50 cursor-not-allowed select-none">
+          <div className="w-full flex items-center justify-between mb-3 pointer-events-none">
+            <h3 className="text-sm font-bold text-gray-400 flex items-center gap-2">
               <PlusCircle size={16} />
               Log Extra Reading
             </h3>
-            <span className="text-green-800 font-bold text-lg">{showLogExtraReading ? '▲' : '▼'}</span>
-          </button>
-          {showLogExtraReading && (
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs text-green-700 mb-3">
-                  Read more than the scheduled chapters today? Add them here so your progress reflects the extra effort.
-                </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="number"
-                min="1"
-                value={extraChaptersInput}
-                onChange={(e) => setExtraChaptersInput(e.target.value)}
-                placeholder="Number of extra chapters"
-                className="flex-1 border-2 border-gray-300 rounded-2xl px-4 py-3 focus:border-purple-500 focus:outline-none"
-              />
-              <button
-                onClick={logExtraChapters}
-                disabled={!canLogExtra}
-                className={`sm:w-auto w-full bg-gradient-to-r from-green-500 to-green-600 text-white px-5 py-3 rounded-2xl font-semibold transition shadow ${
-                  canLogExtra ? 'hover:from-green-600 hover:to-green-700' : 'opacity-60 cursor-not-allowed'
-                }`}
-              >
-                Record Extra Chapters
-              </button>
-            </div>
-            {!!currentUserData?.extraChapters && (
-              <p className="text-sm text-gray-500 mt-3">
-                You have logged <span className="font-semibold text-purple-600">{currentUserData.extraChapters}</span> bonus chapters so far.
-              </p>
-            )}
+            <span className="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded-full">🔒 Temporarily Disabled</span>
           </div>
-
-          {!!currentUserData?.extraChapters && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <Trash2 className="text-red-600" />
-                Remove Extra Reading
-              </label>
-              <p className="text-xs text-gray-500 mb-3">
-                Made a mistake? Remove extra chapters you previously logged.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="number"
-                  min="1"
-                  max={currentUserData.extraChapters}
-                  value={removeExtraChaptersInput}
-                  onChange={(e) => setRemoveExtraChaptersInput(e.target.value)}
-                  placeholder="Number of chapters to remove"
-                  className="flex-1 border-2 border-gray-300 rounded-2xl px-4 py-3 focus:border-red-500 focus:outline-none"
-                />
-                <button
-                  onClick={removeExtraChapters}
-                  disabled={!canRemoveExtra}
-                  className={`sm:w-auto w-full bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-3 rounded-2xl font-semibold transition shadow ${
-                    canRemoveExtra ? 'hover:from-red-600 hover:to-red-700' : 'opacity-60 cursor-not-allowed'
-                  }`}
-                >
-                  Remove Chapters
-                </button>
-              </div>
-              <p className="text-xs text-gray-400 mt-2">
-                This will only remove from your bonus chapters count.
-              </p>
-            </div>
-          )}
-            </div>
-          )}
+          <p className="text-xs text-gray-400 italic">This feature is temporarily disabled.</p>
         </div>
 
         <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border-2 border-red-200">

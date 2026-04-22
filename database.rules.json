@@ -2,10 +2,24 @@
   "rules": {
     "users": {
       ".read": true,
-      ".write": true,
       "$userId": {
         ".read": true,
-        ".write": true
+        ".write": true,
+        "totalChapters": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1189"
+        },
+        "extraChapters": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1189"
+        },
+        "streak": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 365"
+        },
+        "name": {
+          ".validate": "newData.isString() && newData.val().length <= 50"
+        },
+        "language": {
+          ".validate": "newData.isString() && (newData.val() === 'en' || newData.val() === 'ta' || newData.val() === 'ml')"
+        }
       }
     },
     "announcements": {

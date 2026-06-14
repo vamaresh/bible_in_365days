@@ -5,9 +5,6 @@ import { httpsCallable } from 'firebase/functions';
 import { Calendar, Check, Trophy, Users, BookOpen, Flame, Clock, Sparkles, PlusCircle, Trash2, User, Share2, Globe, Send, Bell, X, MessageCircle, Heart, Link, Copy } from 'lucide-react';
 import { createUserId, makeDisplayNameKey, normalizeDisplayName } from './userIdentity';
 
-// OneSignal App ID - Get this from https://onesignal.com dashboard > Settings > Keys & IDs
-const ONESIGNAL_APP_ID = '4aceee22-b1f2-444b-8cae-557d9128bbf8';
-
 // Translation system
 const TRANSLATIONS = {
   en: {
@@ -1420,22 +1417,6 @@ const makeGroupCode = (name) => {
   return `${base}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 };
 
-const clampDateToPlan = (date) => {
-  const normalized = new Date(date);
-  // Use UTC to avoid timezone issues
-  const utcYear = normalized.getUTCFullYear();
-  const utcMonth = normalized.getUTCMonth();
-  const utcDate = normalized.getUTCDate();
-
-  const utcDateObj = new Date(Date.UTC(utcYear, utcMonth, utcDate));
-
-  const minTime = START_DATE.getTime();
-  const maxTime = END_DATE.getTime();
-  const safeTime = Math.min(Math.max(utcDateObj.getTime(), minTime), maxTime);
-  const withinPlan = new Date(safeTime);
-  return withinPlan;
-};
-
 const clampDateToUserPlan = (date, userData) => {
   const normalized = new Date(date);
   const utcDateObj = new Date(Date.UTC(
@@ -1494,7 +1475,7 @@ function App() {
   const [showFixChapterCount, setShowFixChapterCount] = useState(false);
   const [showBadgeExplanation, setShowBadgeExplanation] = useState(false);
   const [showLogExtraReading, setShowLogExtraReading] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState('default');
+  const [, setNotificationPermission] = useState('default');
   const [readingPlanModeInput, setReadingPlanModeInput] = useState(DEFAULT_PLAN_MODE);
   const [planStartDateInput, setPlanStartDateInput] = useState(toIsoDate(START_DATE));
   const [groupNameInput, setGroupNameInput] = useState('');
@@ -1513,18 +1494,6 @@ function App() {
     }, 1000); // Just 1 second
     return () => clearTimeout(quickTimeout);
   }, []);
-
-  // Helper to convert VAPID public key
-  const urlBase64ToUint8Array = (base64String) => {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-  };
 
   // Translation hook
   const { t } = useTranslation(language);

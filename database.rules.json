@@ -17,14 +17,56 @@
         "name": {
           ".validate": "newData.isString() && newData.val().length <= 50"
         },
+        "displayNameKey": {
+          ".validate": "newData.isString() && newData.val().length <= 50"
+        },
+        "identityVersion": {
+          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 2"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() > 0"
+        },
         "language": {
-          ".validate": "newData.isString() && (newData.val() === 'en' || newData.val() === 'ta' || newData.val() === 'ml')"
+          ".validate": "newData.isString() && (newData.val() === 'en' || newData.val() === 'es' || newData.val() === 'ml' || newData.val() === 'hi' || newData.val() === 'ta' || newData.val() === 'te' || newData.val() === 'fr' || newData.val() === 'de' || newData.val() === 'sv' || newData.val() === 'pl' || newData.val() === 'kn' || newData.val() === 'pa')"
+        },
+        "readingPlanMode": {
+          ".validate": "newData.isString() && (newData.val() === 'global' || newData.val() === 'custom')"
+        },
+        "planStartDate": {
+          ".validate": "newData.isString() && newData.val().matches(/^\\d{4}-\\d{2}-\\d{2}$/)"
+        },
+        "groupCode": {
+          ".validate": "newData.isString() && newData.val().length <= 32"
+        },
+        "groupName": {
+          ".validate": "newData.isString() && newData.val().length <= 60"
         }
       }
     },
     "announcements": {
       ".read": true,
       ".write": true
+    },
+    "communityReactions": {
+      ".read": true,
+      ".write": true
+    },
+    "communityReflections": {
+      ".read": true,
+      "$date": {
+        "$userId": {
+          ".write": true,
+          "text": {
+            ".validate": "newData.isString() && newData.val().length <= 240"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length <= 50"
+          },
+          "groupCode": {
+            ".validate": "newData.isString() && newData.val().length <= 32"
+          }
+        }
+      }
     }
   }
 }

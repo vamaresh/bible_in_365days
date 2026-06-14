@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Bible Reading Challenge</string>
+    <string name="title_activity_main">Bible Reading Challenge</string>
+    <string name="package_name">com.bethel.biblechallenge2026</string>
+    <string name="custom_url_scheme">com.bethel.biblechallenge2026</string>
+</resources>

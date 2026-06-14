@@ -5,14 +5,17 @@ import * as logger from "firebase-functions/logger";
 admin.initializeApp();
 
 const ONESIGNAL_APP_ID = "4aceee22-b1f2-444b-8cae-557d9128bbf8";
-const ONESIGNAL_REST_API_KEY = "nl5ao5235eteul6fukytg7ehb";
+const getChallengeYear = () => new Date().getUTCFullYear();
 
 /**
  * HTTP function to send push notification to all users
  */
-export const sendPushToAll = functions.https.onCall(async (request) => {
+export const sendPushToAll = functions.https.onCall({
+  secrets: ["ONESIGNAL_REST_API_KEY"],
+}, async (request) => {
   const message = request.data.message;
-  const title = request.data.title || "Bible Challenge 2026 📖";
+  const title = request.data.title || `Bible Challenge ${getChallengeYear()} 📖`;
+  const apiKey = process.env.ONESIGNAL_REST_API_KEY;
 
   if (!message) {
     throw new functions.https.HttpsError(
@@ -21,12 +24,19 @@ export const sendPushToAll = functions.https.onCall(async (request) => {
     );
   }
 
+  if (!apiKey) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "ONESIGNAL_REST_API_KEY is not configured"
+    );
+  }
+
   try {
     const response = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Basic ${ONESIGNAL_REST_API_KEY}`,
+        "Authorization": `Basic ${apiKey}`,
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
@@ -133,6 +143,7 @@ export const sendDailyReminders = functions.scheduler.onSchedule({
         if (!hasCompleted) {
           notificationsToSend.push({
             userId,
+            displayName: user.name || "Reader",
             dayNumber,
           });
         }
@@ -143,12 +154,12 @@ export const sendDailyReminders = functions.scheduler.onSchedule({
     if (notificationsToSend.length > 0) {
       logger.info(`Sending ${notificationsToSend.length} reminders`);
 
-      for (const {userId} of notificationsToSend) {
+      for (const {userId, displayName} of notificationsToSend) {
         try {
           await sendOneSignalNotification(
             userId,
-            "Bible Challenge 2026",
-            `${userId}, Time to read Holy Bible 📖`,
+            `Bible Challenge ${getChallengeYear()}`,
+            `${displayName}, Time to read Holy Bible 📖`,
             apiKey
           );
           logger.info(`Sent reminder to user: ${userId}`);

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { database, functions } from './firebaseConfig';
 import { ref, set, get, onValue, update } from 'firebase/database';
 import { httpsCallable } from 'firebase/functions';
-import { Calendar, Check, Trophy, Users, BookOpen, Flame, Clock, Sparkles, PlusCircle, Trash2, User, Share2, Globe, Send, Bell, X } from 'lucide-react';
+import { Calendar, Check, Trophy, Users, BookOpen, Flame, Clock, Sparkles, PlusCircle, Trash2, User, Share2, Globe, Send, Bell, X, MessageCircle, Heart, Link, Copy } from 'lucide-react';
+import { createUserId, makeDisplayNameKey, normalizeDisplayName } from './userIdentity';
 
 // OneSignal App ID - Get this from https://onesignal.com dashboard > Settings > Keys & IDs
 const ONESIGNAL_APP_ID = '4aceee22-b1f2-444b-8cae-557d9128bbf8';
@@ -12,7 +13,7 @@ const TRANSLATIONS = {
   en: {
     // App titles and headers
     appTitle: "Bible Challenge",
-    appSubtitle: "2026 Reading Journey",
+    appSubtitle: "{year} Reading Journey",
     appTagline: "Read Together, Grow Together",
     
     // Login/Signup
@@ -130,7 +131,7 @@ const TRANSLATIONS = {
   
   es: {
     appTitle: "Desafío Bíblico",
-    appSubtitle: "Viaje de Lectura 2026",
+    appSubtitle: "Viaje de Lectura {year}",
     appTagline: "Leamos Juntos, Crezcamos Juntos",
     enterName: "Ingresa tu nombre",
     joinChallenge: "Únete al Desafío",
@@ -222,7 +223,7 @@ const TRANSLATIONS = {
 
   ml: {
     appTitle: "ബൈബിൾ ചലഞ്ച്",
-    appSubtitle: "2026 വായനയാത്ര",
+    appSubtitle: "{year} വായനയാത്ര",
     appTagline: "ഒരുമിച്ച് വായിക്കുക, ഒരുമിച്ച് വളരുക",
     enterName: "നിങ്ങളുടെ പേര് നൽകുക",
     joinChallenge: "ചലഞ്ചിൽ ചേരുക",
@@ -314,7 +315,7 @@ const TRANSLATIONS = {
 
   hi: {
     appTitle: "बाइबल चैलेंज",
-    appSubtitle: "2026 पठन यात्रा",
+    appSubtitle: "{year} पठन यात्रा",
     appTagline: "साथ पढ़ें, साथ बढ़ें",
     enterName: "अपना नाम दर्ज करें",
     joinChallenge: "चैलेंज में शामिल हों",
@@ -406,7 +407,7 @@ const TRANSLATIONS = {
 
   ta: {
     appTitle: "பைபிள் சவால்",
-    appSubtitle: "2026 வாசிப்பு பயணம்",
+    appSubtitle: "{year} வாசிப்பு பயணம்",
     appTagline: "ஒன்றாக வாசியுங்கள், ஒன்றாக வளருங்கள்",
     enterName: "உங்கள் பெயரை உள்ளீடு செய்யவும்",
     joinChallenge: "சவாலில் சேரவும்",
@@ -498,7 +499,7 @@ const TRANSLATIONS = {
 
   te: {
     appTitle: "బైబిల్ ఛాలెంజ్",
-    appSubtitle: "2026 చదువు ప్రయాణం",
+    appSubtitle: "{year} చదువు ప్రయాణం",
     appTagline: "కలిసి చదవండి, కలిసి పెరుగుదలు సాధించండి",
     enterName: "మీ పేరు నమోదు చేయండి",
     joinChallenge: "ఛాలెంజ్‌లో చేరండి",
@@ -590,7 +591,7 @@ const TRANSLATIONS = {
 
   fr: {
     appTitle: "Défi Biblique",
-    appSubtitle: "Voyage de Lecture 2026",
+    appSubtitle: "Voyage de Lecture {year}",
     appTagline: "Lisons Ensemble, Grandissons Ensemble",
     enterName: "Entrez votre nom",
     joinChallenge: "Rejoignez le Défi",
@@ -680,7 +681,7 @@ const TRANSLATIONS = {
 
   de: {
     appTitle: "Bibel Challenge",
-    appSubtitle: "Lese-Reise 2026",
+    appSubtitle: "Lese-Reise {year}",
     appTagline: "Lasst uns zusammen lesen, zusammen wachsen",
     enterName: "Geben Sie Ihren Namen ein",
     joinChallenge: "Der Challenge beitreten",
@@ -770,7 +771,7 @@ const TRANSLATIONS = {
 
   sv: {
     appTitle: "Bibelutmaning",
-    appSubtitle: "Läsresa 2026",
+    appSubtitle: "Läsresa {year}",
     appTagline: "Låt oss läsa tillsammans, växa tillsammans",
     enterName: "Ange ditt namn",
     joinChallenge: "Gå med i utmaningen",
@@ -860,7 +861,7 @@ const TRANSLATIONS = {
 
   pl: {
     appTitle: "Wyzwanie Biblijne",
-    appSubtitle: "Podróż Czytelnicza 2026",
+    appSubtitle: "Podróż Czytelnicza {year}",
     appTagline: "Czytajmy Razem, Rozwijajmy Się Razem",
     enterName: "Wpisz swoje imię",
     joinChallenge: "Dołącz do Wyzwania",
@@ -950,7 +951,7 @@ const TRANSLATIONS = {
 
   kn: {
     appTitle: "ಬೈಬಲ್ ಚಾಲೆಂಜ್",
-    appSubtitle: "2026 ಓದು ಪ್ರಯಾಣ",
+    appSubtitle: "{year} ಓದು ಪ್ರಯಾಣ",
     appTagline: "ಒಟ್ಟಿಗೆ ಓದೋಣ, ಒಟ್ಟಿಗೆ ಬೆಳೆಯೋಣ",
     enterName: "ನಿಮ್ಮ ಹೆಸರನ್ನು ನಮೂದಿಸಿ",
     joinChallenge: "ಚಾಲೆಂಜ್‌ಗೆ ಸೇರಿಕೊಳ್ಳಿ",
@@ -1040,7 +1041,7 @@ const TRANSLATIONS = {
 
   pa: {
     appTitle: "ਬਾਈਬਲ ਚੈਲੇਂਜ",
-    appSubtitle: "2026 ਪੜ੍ਹਨ ਦੀ ਯਾਤਰਾ",
+    appSubtitle: "{year} ਪੜ੍ਹਨ ਦੀ ਯਾਤਰਾ",
     appTagline: "ਇਕੱਠੇ ਪੜ੍ਹੀਏ, ਇਕੱਠੇ ਵਧੀਏ",
     enterName: "ਆਪਣਾ ਨਾਮ ਦਾਖਲ ਕਰੋ",
     joinChallenge: "ਚੈਲੇਂਜ ਵਿੱਚ ਸ਼ਾਮਲ ਹੋਵੋ",
@@ -1318,11 +1319,30 @@ const MILESTONE_BADGES = [
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const TOTAL_CHAPTERS = BIBLE_BOOKS.reduce((sum, book) => sum + book.chapters, 0);
+const GLOBAL_CHALLENGE_YEAR = new Date().getFullYear();
 // Use UTC dates to avoid timezone issues
-const START_DATE = new Date(Date.UTC(2026, 0, 1)); // January 1, 2026 UTC
-const END_DATE = new Date(Date.UTC(2026, 11, 31)); // December 31, 2026 UTC
+const START_DATE = new Date(Date.UTC(GLOBAL_CHALLENGE_YEAR, 0, 1));
+const END_DATE = new Date(Date.UTC(GLOBAL_CHALLENGE_YEAR, 11, 31));
 const TOTAL_DAYS = Math.floor((END_DATE - START_DATE) / MS_PER_DAY) + 1;
 const CHAPTERS_PER_DAY = Math.ceil(TOTAL_CHAPTERS / TOTAL_DAYS);
+const DEFAULT_PLAN_MODE = 'global';
+const GLOBAL_GROUP_CODE = `GLOBAL-${GLOBAL_CHALLENGE_YEAR}`;
+
+const toIsoDate = (date) => {
+  const normalized = new Date(date);
+  return new Date(Date.UTC(
+    normalized.getUTCFullYear(),
+    normalized.getUTCMonth(),
+    normalized.getUTCDate()
+  )).toISOString().split('T')[0];
+};
+
+const parseIsoDateAsUtc = (dateStr) => {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(Date.UTC(year, month - 1, day));
+};
 
 function getDailyVerse(language) {
   const verses = TRANSLATIONS[language]?.verses || TRANSLATIONS.en.verses;
@@ -1364,6 +1384,42 @@ const THEMES = {
 
 const getThemeClasses = (themeKey) => THEMES[themeKey] || THEMES['purple-blue'];
 
+const getPlanMode = (userData) => userData?.readingPlanMode || DEFAULT_PLAN_MODE;
+
+const getPlanStartDate = (userData) => {
+  if (getPlanMode(userData) === 'custom') {
+    return parseIsoDateAsUtc(userData?.planStartDate) || START_DATE;
+  }
+  return START_DATE;
+};
+
+const getPlanEndDate = (userData) => {
+  const start = getPlanStartDate(userData);
+  return new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + TOTAL_DAYS - 1));
+};
+
+const isGlobalParticipant = (userData) => getPlanMode(userData) !== 'custom';
+
+const getReadingCircleCode = (userData) => {
+  if (!userData?.groupCode) return GLOBAL_GROUP_CODE;
+  return userData.groupCode;
+};
+
+const getReadingCircleName = (userData) => {
+  if (!userData?.groupName) return 'Global Bible Challenge';
+  return userData.groupName;
+};
+
+const makeGroupCode = (name) => {
+  const base = (name || 'Circle')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 18) || 'CIRCLE';
+  return `${base}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+};
+
 const clampDateToPlan = (date) => {
   const normalized = new Date(date);
   // Use UTC to avoid timezone issues
@@ -1378,6 +1434,25 @@ const clampDateToPlan = (date) => {
   const safeTime = Math.min(Math.max(utcDateObj.getTime(), minTime), maxTime);
   const withinPlan = new Date(safeTime);
   return withinPlan;
+};
+
+const clampDateToUserPlan = (date, userData) => {
+  const normalized = new Date(date);
+  const utcDateObj = new Date(Date.UTC(
+    normalized.getUTCFullYear(),
+    normalized.getUTCMonth(),
+    normalized.getUTCDate()
+  ));
+  const start = getPlanStartDate(userData);
+  const end = getPlanEndDate(userData);
+  const safeTime = Math.min(Math.max(utcDateObj.getTime(), start.getTime()), end.getTime());
+  return new Date(safeTime);
+};
+
+const getDayNumberForPlan = (date, userData) => {
+  const planDate = clampDateToUserPlan(date, userData);
+  const start = getPlanStartDate(userData);
+  return Math.floor((planDate - start) / MS_PER_DAY) + 1;
 };
 
 const getCommunityBadgeLabel = (progress, completedDays = 0) => {
@@ -1420,6 +1495,14 @@ function App() {
   const [showBadgeExplanation, setShowBadgeExplanation] = useState(false);
   const [showLogExtraReading, setShowLogExtraReading] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState('default');
+  const [readingPlanModeInput, setReadingPlanModeInput] = useState(DEFAULT_PLAN_MODE);
+  const [planStartDateInput, setPlanStartDateInput] = useState(toIsoDate(START_DATE));
+  const [groupNameInput, setGroupNameInput] = useState('');
+  const [groupCodeInput, setGroupCodeInput] = useState('');
+  const [communityFilter, setCommunityFilter] = useState('global');
+  const [reflectionInput, setReflectionInput] = useState('');
+  const [communityReactions, setCommunityReactions] = useState({});
+  const [communityReflections, setCommunityReflections] = useState({});
 
   // Simple mount effect - ensure loading is set to false quickly
   useEffect(() => {
@@ -1503,6 +1586,8 @@ function App() {
     console.log('🚀 Main useEffect triggered, language:', language);
     loadData();
     loadAnnouncements();
+    loadCommunityReactions();
+    loadCommunityReflections();
     // Set daily verse based on current language
     setDailyVerse(getDailyVerse(language));
     
@@ -1565,7 +1650,7 @@ function App() {
           const completed = userData?.completedDates?.includes(today);
           
           if (!completed) {
-            const dayNumber = Math.floor((now - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
+            const dayNumber = getDayNumberForPlan(now, userData);
             new Notification('Bible Challenge Reminder', {
               body: `Time to read Day ${dayNumber}'s chapters! 📖`,
               icon: '/logo192.png',
@@ -1650,6 +1735,22 @@ function App() {
     });
   };
 
+  const loadCommunityReactions = () => {
+    const reactionsRef = ref(database, 'communityReactions');
+
+    onValue(reactionsRef, (snapshot) => {
+      setCommunityReactions(snapshot.val() || {});
+    });
+  };
+
+  const loadCommunityReflections = () => {
+    const reflectionsRef = ref(database, 'communityReflections');
+
+    onValue(reflectionsRef, (snapshot) => {
+      setCommunityReflections(snapshot.val() || {});
+    });
+  };
+
   const loadData = () => {
     console.log('🔄 loadData called - attempting to connect to Firebase...');
     const usersRef = ref(database, 'users');
@@ -1695,6 +1796,10 @@ function App() {
     if (userData?.completedChapters) {
       setCompletedChapters(userData.completedChapters);
     }
+    setReadingPlanModeInput(getPlanMode(userData));
+    setPlanStartDateInput(toIsoDate(getPlanStartDate(userData)));
+    setGroupNameInput(userData?.groupName || '');
+    setGroupCodeInput(userData?.groupCode || '');
   }, [currentUser, users]);
 
   useEffect(() => {
@@ -1713,51 +1818,57 @@ function App() {
   }, [language]);
 
   const login = async (name) => {
-    if (!name.trim()) return;
-    
-    const sanitizedName = name.trim().replace(/[.#$[\]]/g, '_');
-    const userRef = ref(database, `users/${sanitizedName}`);
+    const displayName = normalizeDisplayName(name);
+    if (!displayName) return;
+
+    const inviteGroupCode = new URLSearchParams(window.location.search).get('group');
     
     try {
-      const snapshot = await get(userRef);
-      if (snapshot.exists()) {
-        const userData = snapshot.val();
-        setCurrentUser(sanitizedName);
-        localStorage.setItem(USER_STORAGE_KEY, sanitizedName);
-        setReminderTime(userData.reminderTime || '07:00');
-        setLanguage(userData.language || 'en'); // Load user's language preference
-        
-        // Link OneSignal user ID to this app user
-        if (window.OneSignalDeferred) {
-          window.OneSignalDeferred.push(function(OneSignal) {
-            OneSignal.login(sanitizedName);
-          });
+      let userId = createUserId(displayName);
+      let userRef = ref(database, `users/${userId}`);
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const snapshot = await get(userRef);
+        if (!snapshot.exists()) {
+          break;
         }
-        
-        setView('home');
-      } else {
-        const newUser = {
-          name: name.trim(),
-          completedDates: [],
-          streak: 0,
-          totalChapters: 0,
-          reminderTime: '07:00',
-          extraChapters: 0,
-          language: language // Save selected language
-        };
-        await set(userRef, newUser);
-        setCurrentUser(sanitizedName);
-        localStorage.setItem(USER_STORAGE_KEY, sanitizedName);
-        
-        // Link OneSignal user ID to this app user
-        if (window.OneSignalDeferred) {
-          window.OneSignalDeferred.push(function(OneSignal) {
-            OneSignal.login(sanitizedName);
-          });
+
+        if (attempt === 2) {
+          throw new Error('Could not allocate a unique reader ID');
         }
-        
-        setView('home');
+
+        userId = createUserId(displayName);
+        userRef = ref(database, `users/${userId}`);
       }
+
+      const newUser = {
+        name: displayName,
+        displayNameKey: makeDisplayNameKey(displayName),
+        identityVersion: 2,
+        createdAt: Date.now(),
+        completedDates: [],
+        streak: 0,
+        totalChapters: 0,
+        reminderTime: '07:00',
+        extraChapters: 0,
+        language: language, // Save selected language
+        readingPlanMode: DEFAULT_PLAN_MODE,
+        planStartDate: toIsoDate(START_DATE),
+        groupCode: inviteGroupCode || GLOBAL_GROUP_CODE,
+        groupName: inviteGroupCode ? 'Invited Reading Circle' : 'Global Bible Challenge'
+      };
+      await set(userRef, newUser);
+      setCurrentUser(userId);
+      localStorage.setItem(USER_STORAGE_KEY, userId);
+
+      // Link OneSignal user ID to this app user
+      if (window.OneSignalDeferred) {
+        window.OneSignalDeferred.push(function(OneSignal) {
+          OneSignal.login(userId);
+        });
+      }
+
+      setView('home');
     } catch (error) {
       console.error('Error logging in:', error);
       alert('Error logging in. Please try again.');
@@ -1859,7 +1970,7 @@ function App() {
         const completed = userData?.completedDates?.includes(today);
         
         if (!completed) {
-          const dayNumber = Math.floor((now - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
+          const dayNumber = getDayNumberForPlan(now, userData);
           new Notification('Bible Challenge Reminder', {
             body: `Time to read Day ${dayNumber}'s chapters! 📖`,
             icon: '/logo192.png',
@@ -1907,7 +2018,7 @@ function App() {
       const sendPushToAll = httpsCallable(functions, 'sendPushToAll');
       const result = await sendPushToAll({
         message: announcementInput,
-        title: 'Bible Challenge 2026 📖'
+        title: `Bible Challenge ${GLOBAL_CHALLENGE_YEAR} 📖`
       });
 
       if (result.data.success) {
@@ -1954,8 +2065,8 @@ function App() {
   };
 
   const getDayNumber = (date) => {
-    const withinPlan = clampDateToPlan(date);
-    return Math.floor((withinPlan - START_DATE) / MS_PER_DAY) + 1;
+    const userData = users.find(u => u.id === currentUser);
+    return getDayNumberForPlan(date, userData);
   };
 
   const getReadingForDay = (dayNum, language = 'en') => {
@@ -1998,18 +2109,18 @@ function App() {
   };
 
   const markComplete = async (date) => {
-    const planDate = clampDateToPlan(date);
-    const dateStr = planDate.toISOString().split('T')[0];
     const userRef = ref(database, `users/${currentUser}`);
     
     try {
       const snapshot = await get(userRef);
       const userData = snapshot.val() || {};
+      const planDate = clampDateToUserPlan(date, userData);
+      const dateStr = planDate.toISOString().split('T')[0];
       const completed = userData.completedDates || [];
       const chaptersData = userData.completedChapters || {};
       
       // Get the reading plan for this date
-      const dayNumber = Math.floor((planDate - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
+      const dayNumber = getDayNumberForPlan(planDate, userData);
       const reading = getReadingForDay(dayNumber);
       
       // Mark all chapters for this day as completed
@@ -2038,7 +2149,7 @@ function App() {
         completedDates: newCompleted,
         completedChapters: newChaptersData,
         totalChapters: totalChaptersFromDates + (userData.extraChapters || 0),
-        streak: calculateStreak(newCompleted),
+        streak: calculateStreak(newCompleted, userData),
         completionTimestamps: completionTimestamps
       });
     } catch (error) {
@@ -2047,13 +2158,13 @@ function App() {
   };
 
   const markIncomplete = async (date) => {
-    const planDate = clampDateToPlan(date);
-    const dateStr = planDate.toISOString().split('T')[0];
     const userRef = ref(database, `users/${currentUser}`);
     
     try {
       const snapshot = await get(userRef);
       const userData = snapshot.val() || {};
+      const planDate = clampDateToUserPlan(date, userData);
+      const dateStr = planDate.toISOString().split('T')[0];
       const completed = (userData.completedDates || []).filter(d => d !== dateStr);
       const chaptersData = userData.completedChapters || {};
       
@@ -2071,7 +2182,7 @@ function App() {
         completedDates: completed,
         completedChapters: newChaptersData,
         totalChapters: totalChaptersFromDates + (userData.extraChapters || 0),
-        streak: calculateStreak(completed)
+        streak: calculateStreak(completed, userData)
       });
     } catch (error) {
       console.error('Error marking incomplete:', error);
@@ -2079,14 +2190,14 @@ function App() {
   };
 
   const toggleChapter = async (date, book, chapter) => {
-    const planDate = clampDateToPlan(date);
-    const dateStr = planDate.toISOString().split('T')[0];
     const chapterKey = `${book} ${chapter}`;
     const userRef = ref(database, `users/${currentUser}`);
     
     try {
       const snapshot = await get(userRef);
       const userData = snapshot.val() || {};
+      const planDate = clampDateToUserPlan(date, userData);
+      const dateStr = planDate.toISOString().split('T')[0];
       const chaptersData = userData.completedChapters || {};
       const dateChapters = chaptersData[dateStr] || [];
       const completedDates = userData.completedDates || [];
@@ -2112,7 +2223,7 @@ function App() {
       const totalChaptersFromDates = Object.values(newChaptersData).reduce((sum, chapters) => sum + chapters.length, 0);
       
       // Check if all chapters for this day are completed
-      const dayNumber = Math.floor((planDate - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
+      const dayNumber = getDayNumberForPlan(planDate, userData);
       const reading = getReadingForDay(dayNumber);
       const allDayChapters = reading.map(({ book, chapter }) => `${book} ${chapter}`);
       const allCompleted = allDayChapters.every(ch => newDateChapters.includes(ch));
@@ -2136,7 +2247,7 @@ function App() {
         completedChapters: newChaptersData,
         completedDates: newCompletedDates,
         totalChapters: totalChaptersFromDates + (userData.extraChapters || 0),
-        streak: calculateStreak(newCompletedDates),
+        streak: calculateStreak(newCompletedDates, userData),
         completionTimestamps: completionTimestamps
       });
     } catch (error) {
@@ -2208,9 +2319,128 @@ function App() {
     const userRef = ref(database, `users/${currentUser}`);
 
     try {
-      await update(userRef, { name: trimmed });
+      await update(userRef, {
+        name: trimmed,
+        displayNameKey: makeDisplayNameKey(trimmed)
+      });
     } catch (error) {
       console.error('Error updating display name:', error);
+    }
+  };
+
+  const savePlanSettings = async () => {
+    if (!currentUser) return;
+
+    const mode = readingPlanModeInput === 'custom' ? 'custom' : DEFAULT_PLAN_MODE;
+    const startDate = mode === 'custom' ? planStartDateInput : toIsoDate(START_DATE);
+    if (!parseIsoDateAsUtc(startDate)) {
+      alert('Please choose a valid start date.');
+      return;
+    }
+
+    const userRef = ref(database, `users/${currentUser}`);
+
+    try {
+      await update(userRef, {
+        readingPlanMode: mode,
+        planStartDate: startDate
+      });
+      setSelectedDate(clampDateToUserPlan(new Date(), { readingPlanMode: mode, planStartDate: startDate }));
+      alert(mode === 'custom'
+        ? '✅ Personal 365-day plan saved. Your existing progress is kept.'
+        : `✅ Global ${GLOBAL_CHALLENGE_YEAR} challenge restored. Your existing progress is kept.`
+      );
+    } catch (error) {
+      console.error('Error saving plan settings:', error);
+      alert('Failed to save plan settings. Please try again.');
+    }
+  };
+
+  const saveReadingCircle = async () => {
+    if (!currentUser) return;
+
+    const cleanName = groupNameInput.trim();
+    const cleanCode = groupCodeInput.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    const nextCode = cleanCode || makeGroupCode(cleanName || `${currentUser}'s Circle`);
+    const nextName = cleanName || 'My Reading Circle';
+
+    try {
+      await update(ref(database, `users/${currentUser}`), {
+        groupCode: nextCode,
+        groupName: nextName
+      });
+      setGroupCodeInput(nextCode);
+      setGroupNameInput(nextName);
+      setCommunityFilter('circle');
+      alert('✅ Reading circle saved.');
+    } catch (error) {
+      console.error('Error saving reading circle:', error);
+      alert('Failed to save reading circle. Please try again.');
+    }
+  };
+
+  const leaveReadingCircle = async () => {
+    if (!currentUser) return;
+
+    try {
+      await update(ref(database, `users/${currentUser}`), {
+        groupCode: GLOBAL_GROUP_CODE,
+        groupName: 'Global Bible Challenge'
+      });
+      setGroupCodeInput('');
+      setGroupNameInput('');
+      setCommunityFilter('global');
+    } catch (error) {
+      console.error('Error leaving reading circle:', error);
+    }
+  };
+
+  const copyGroupInvite = () => {
+    const code = getReadingCircleCode(currentUserData);
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?group=${encodeURIComponent(code)}`;
+    navigator.clipboard.writeText(inviteUrl).then(() => {
+      alert('Invite link copied.');
+    }).catch(() => {
+      alert(inviteUrl);
+    });
+  };
+
+  const saveDailyReflection = async () => {
+    if (!currentUser || !reflectionInput.trim()) return;
+
+    const todayKey = toIsoDate(new Date());
+    const reflectionData = {
+      userId: currentUser,
+      name: currentUserData?.name || currentUser,
+      groupCode: getReadingCircleCode(currentUserData),
+      text: reflectionInput.trim().slice(0, 240),
+      createdAt: Date.now()
+    };
+
+    try {
+      await set(ref(database, `communityReflections/${todayKey}/${currentUser}`), reflectionData);
+      setReflectionInput('');
+      alert('Reflection shared with your reading circle.');
+    } catch (error) {
+      console.error('Error saving reflection:', error);
+      alert('Failed to share reflection. Please try again.');
+    }
+  };
+
+  const sendEncouragement = async (targetUserId, type) => {
+    if (!currentUser || !targetUserId) return;
+
+    const todayKey = toIsoDate(new Date());
+    const reactionPath = `communityReactions/${todayKey}/${targetUserId}/${type}/${currentUser}`;
+
+    try {
+      await set(ref(database, reactionPath), {
+        from: currentUser,
+        name: currentUserData?.name || currentUser,
+        createdAt: Date.now()
+      });
+    } catch (error) {
+      console.error('Error sending encouragement:', error);
     }
   };
 
@@ -2232,7 +2462,7 @@ function App() {
     }
   };
 
-  const calculateStreak = (completedDates) => {
+  const calculateStreak = (completedDates, userData) => {
     if (!completedDates || !completedDates.length) return 0;
 
     // Normalize all entries to ISO date strings and use a Set for O(1) lookups
@@ -2249,10 +2479,11 @@ function App() {
     );
 
     let streak = 0;
-    let checkDate = clampDateToPlan(new Date());
+    const planStart = getPlanStartDate(userData);
+    let checkDate = clampDateToUserPlan(new Date(), userData);
 
     // Count consecutive days backwards from today while dates exist in the set
-    while (checkDate >= START_DATE) {
+    while (checkDate >= planStart) {
       const checkStr = checkDate.toISOString().split('T')[0];
       if (normalizedSet.has(checkStr)) {
         streak++;
@@ -2268,7 +2499,7 @@ function App() {
 
   const isDateCompleted = (date, userName) => {
     const user = users.find(u => u.id === userName);
-    const planDate = clampDateToPlan(date);
+    const planDate = clampDateToUserPlan(date, user);
     const dateStr = planDate.toISOString().split('T')[0];
     return user?.completedDates?.includes(dateStr) || false;
   };
@@ -2303,8 +2534,8 @@ function App() {
 
   const shareApp = async () => {
     const shareData = {
-      title: 'Bible Challenge 2026',
-      text: 'Join me in reading through the entire Bible in 2026! 📖✨',
+      title: `Bible Challenge ${GLOBAL_CHALLENGE_YEAR}`,
+      text: `Join me in reading through the entire Bible in ${GLOBAL_CHALLENGE_YEAR}! 📖✨`,
       url: window.location.href
     };
 
@@ -2323,7 +2554,7 @@ function App() {
   };
 
   const copyToClipboard = () => {
-    const text = `Join me in the Bible Challenge 2026! 📖✨ Read through the entire Bible together. ${window.location.href}`;
+    const text = `Join me in the Bible Challenge ${GLOBAL_CHALLENGE_YEAR}! 📖✨ Read through the entire Bible together. ${window.location.href}`;
     navigator.clipboard.writeText(text).then(() => {
       alert('Link copied to clipboard! Share it with your friends.');
     }).catch(() => {
@@ -2360,7 +2591,7 @@ function App() {
               <img src={ICON_SRC} alt="Bible Challenge icon" className="w-16 h-16 object-contain" />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-1">{t('appTitle')}</h1>
-            <h2 className="text-2xl font-bold text-gray-700 mb-2">{t('appSubtitle')}</h2>
+            <h2 className="text-2xl font-bold text-gray-700 mb-2">{t('appSubtitle', { year: GLOBAL_CHALLENGE_YEAR })}</h2>
             <p className="text-gray-600 mb-4">{t('appTagline')}</p>
             <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4">
               <p className="text-sm font-semibold text-gray-800">📖 {TOTAL_CHAPTERS} chapters in {TOTAL_DAYS} days</p>
@@ -2426,10 +2657,13 @@ function App() {
 
   const currentUserData = users.find(u => u.id === currentUser);
   const actualToday = new Date();
-  const planToday = clampDateToPlan(actualToday);
-  const hasPlanStarted = actualToday >= START_DATE;
-  const daysUntilStart = hasPlanStarted ? 0 : Math.max(0, Math.ceil((START_DATE - actualToday) / MS_PER_DAY));
-  const todayDayNumber = getDayNumber(planToday);
+  const currentPlanStart = getPlanStartDate(currentUserData);
+  const currentPlanEnd = getPlanEndDate(currentUserData);
+  const currentPlanMode = getPlanMode(currentUserData);
+  const planToday = clampDateToUserPlan(actualToday, currentUserData);
+  const hasPlanStarted = actualToday >= currentPlanStart;
+  const daysUntilStart = hasPlanStarted ? 0 : Math.max(0, Math.ceil((currentPlanStart - actualToday) / MS_PER_DAY));
+  const todayDayNumber = getDayNumberForPlan(planToday, currentUserData);
   const todayCompleted = isDateCompleted(planToday, currentUser);
   const todayReading = getReadingForDay(todayDayNumber, language);
   const progressPercent = (Math.round(getProgress(currentUser) * 10) / 10).toFixed(1);
@@ -2438,7 +2672,7 @@ function App() {
     earned: progressPercent >= badge.threshold
   }));
   const latestEarnedBadge = milestoneBadges.filter(badge => badge.earned).slice(-1)[0];
-  const detailDayNumber = getDayNumber(selectedDate);
+  const detailDayNumber = getDayNumberForPlan(selectedDate, currentUserData);
   const detailReading = getReadingForDay(detailDayNumber, language);
   const extraAmount = parseInt(extraChaptersInput, 10);
   const canLogExtra = !Number.isNaN(extraAmount) && extraAmount > 0;
@@ -2452,7 +2686,7 @@ function App() {
           <div className="text-center">
             <img src={ICON_SRC} alt="Bible Challenge icon" className="w-10 h-10 mx-auto mb-1 drop-shadow-md" />
             <h1 className="text-base font-bold opacity-90">{t('appTitle')}</h1>
-            <p className="text-xs opacity-75">Global 2026 Plan</p>
+            <p className="text-xs opacity-75">{currentPlanMode === 'custom' ? 'Personal 365-Day Plan' : `Global ${GLOBAL_CHALLENGE_YEAR} Plan`}</p>
           </div>
         </div>
       )}
@@ -2463,7 +2697,7 @@ function App() {
         <div className="text-center mb-3">
           <img src={ICON_SRC} alt="Bible Challenge icon" className="w-12 h-12 mx-auto mb-2 drop-shadow-md" />
           <h1 className="text-lg font-bold opacity-90">{t('appTitle')}</h1>
-          <p className="text-xs opacity-75">Global 2026 Plan</p>
+          <p className="text-xs opacity-75">{currentPlanMode === 'custom' ? 'Personal 365-Day Plan' : `Global ${GLOBAL_CHALLENGE_YEAR} Plan`}</p>
         </div>
         <div className="flex justify-between items-center mb-4">
           <div>
@@ -2481,7 +2715,7 @@ function App() {
                 {t('planBeginsIn', { 
                   days: daysUntilStart, 
                   unit: daysUntilStart === 1 ? t('day') : t('days'),
-                  date: START_DATE.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', { month: 'long', day: 'numeric' })
+                  date: currentPlanStart.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', { month: 'long', day: 'numeric' })
                 })}
               </p>
             )}
@@ -2708,7 +2942,7 @@ function App() {
                       const checkDate = new Date(today);
                       checkDate.setDate(checkDate.getDate() - i);
                       
-                      if (checkDate < START_DATE) break;
+                      if (checkDate < currentPlanStart) break;
                       
                       const dateStr = checkDate.toISOString().split('T')[0];
                       const dayNumber = getDayNumber(checkDate);
@@ -2778,6 +3012,35 @@ function App() {
                 {t('viewFullCalendar')}
               </button>
             </div>
+
+            {todayCompleted && (
+              <div className="bg-white rounded-3xl shadow-lg p-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                  <MessageCircle className="text-blue-600" />
+                  Share a Reflection
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">What stood out from today's reading? Share a short note with your reading circle.</p>
+                <textarea
+                  value={reflectionInput}
+                  onChange={(e) => setReflectionInput(e.target.value)}
+                  maxLength={240}
+                  placeholder="A verse, thought, or encouragement..."
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-blue-500 focus:outline-none text-sm min-h-[96px] mb-3"
+                />
+                <button
+                  onClick={saveDailyReflection}
+                  disabled={!reflectionInput.trim()}
+                  className={`w-full py-3 rounded-2xl font-semibold transition flex items-center justify-center gap-2 ${
+                    reflectionInput.trim()
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  <Send size={17} />
+                  Share with My Circle
+                </button>
+              </div>
+            )}
 
             <div className="bg-white rounded-3xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -2860,9 +3123,9 @@ function App() {
               {Array.from({ length: getDaysInMonth(selectedMonth, selectedYear) }).map((_, idx) => {
                 const day = idx + 1;
                 const date = new Date(selectedYear, selectedMonth, day);
-                const dateStr = date.toISOString().split('T')[0];
-                const startStr = START_DATE.toISOString().split('T')[0];
-                const endStr = END_DATE.toISOString().split('T')[0];
+                const dateStr = toIsoDate(date);
+                const startStr = toIsoDate(currentPlanStart);
+                const endStr = toIsoDate(currentPlanEnd);
                 
                 if (dateStr < startStr || dateStr > endStr) {
                   return (
@@ -2982,33 +3245,98 @@ function App() {
             <Users className="text-purple-600" />
             Community Progress
           </h2>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setCommunityFilter('global')}
+              className={`py-2 rounded-xl text-sm font-bold border-2 ${
+                communityFilter === 'global' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-700 border-purple-100'
+              }`}
+            >
+              Global {GLOBAL_CHALLENGE_YEAR}
+            </button>
+            <button
+              onClick={() => setCommunityFilter('circle')}
+              className={`py-2 rounded-xl text-sm font-bold border-2 ${
+                communityFilter === 'circle' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-100'
+              }`}
+            >
+              My Circle
+            </button>
+          </div>
+          <div className="mt-3 bg-blue-50 rounded-2xl p-3 text-left border border-blue-100">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-blue-800">{getReadingCircleName(currentUserData)}</p>
+                <p className="text-[11px] text-blue-600">Invite code: {getReadingCircleCode(currentUserData)}</p>
+              </div>
+              <button
+                onClick={copyGroupInvite}
+                className="bg-white text-blue-700 border border-blue-200 rounded-xl px-3 py-2 text-xs font-bold flex items-center gap-1"
+              >
+                <Copy size={13} />
+                Invite
+              </button>
+            </div>
+          </div>
         </div>
+        {(() => {
+          const todayKey = toIsoDate(new Date());
+          const currentCircleCode = getReadingCircleCode(currentUserData);
+          const reflections = Object.values(communityReflections[todayKey] || {})
+            .filter((item) => communityFilter === 'global' ? isGlobalParticipant(users.find(u => u.id === item.userId)) : item.groupCode === currentCircleCode)
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+            .slice(0, 4);
+
+          if (!reflections.length) return null;
+
+          return (
+            <div className="mb-5 bg-amber-50 rounded-2xl p-4 border-2 border-amber-100">
+              <h3 className="text-sm font-bold text-amber-900 mb-3 flex items-center gap-2">
+                <MessageCircle size={16} />
+                Today's Reflections
+              </h3>
+              <div className="space-y-3">
+                {reflections.map((item) => (
+                  <div key={`${item.userId}-${item.createdAt}`} className="bg-white rounded-xl p-3 border border-amber-100">
+                    <p className="text-sm text-gray-800">{item.text}</p>
+                    <p className="text-xs text-amber-700 mt-2 font-semibold">{item.name}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
         <div className="space-y-3">
           {(() => {
+            const currentCircleCode = getReadingCircleCode(currentUserData);
+            const visibleUsers = users.filter((user) => {
+              if (communityFilter === 'circle') {
+                return getReadingCircleCode(user) === currentCircleCode;
+              }
+              return isGlobalParticipant(user);
+            });
+
             // Calculate today's date and day number in the challenge
             const now = new Date();
             const todayMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).getTime();
             const today = new Date().toISOString().split('T')[0];
-            const currentDayNumber = Math.floor((now - START_DATE) / (1000 * 60 * 60 * 24)) + 1;
-            
-            // Get today's scheduled reading
-            const todaysReading = getReadingForDay(currentDayNumber);
-            const todaysChapterKeys = todaysReading.map(({ book, chapter }) => `${book} ${chapter}`);
-            
             // Find who completed TODAY'S scheduled reading first (earliest timestamp)
-            const usersWithTimestamps = users
+            const usersWithTimestamps = visibleUsers
               .filter(u => {
                 // Check if they completed today's date with timestamp from today
                 if (!u.completionTimestamps?.[today] || u.completionTimestamps[today] < todayMidnight) {
                   return false;
                 }
                 // Verify they actually completed TODAY's scheduled chapters
+                const userDayNumber = getDayNumberForPlan(now, u);
+                const userReading = getReadingForDay(userDayNumber);
+                const userChapterKeys = userReading.map(({ book, chapter }) => `${book} ${chapter}`);
                 const userTodayChapters = u.completedChapters?.[today] || [];
-                const completedTodaysReading = todaysChapterKeys.every(ch => userTodayChapters.includes(ch));
+                const completedTodaysReading = userChapterKeys.every(ch => userTodayChapters.includes(ch));
                 
                 // Also verify they have at least currentDayNumber days completed (to prevent catch-up readers from getting the badge)
                 const userDaysCompleted = u.completedDates?.length || 0;
-                const hasEnoughDays = userDaysCompleted >= currentDayNumber;
+                const hasEnoughDays = userDaysCompleted >= userDayNumber;
                 
                 return completedTodaysReading && hasEnoughDays;
               })
@@ -3021,14 +3349,31 @@ function App() {
             // First element has the EARLIEST (smallest) timestamp
             const firstTodayUserId = usersWithTimestamps.length > 0 ? usersWithTimestamps[0].id : null;
             
-            return [...users].sort((a, b) => (b.totalChapters || 0) - (a.totalChapters || 0)).map((user, idx) => {
+            if (visibleUsers.length === 0) {
+              return (
+                <div className="text-center bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                  <Users className="mx-auto text-gray-400 mb-2" />
+                  <p className="text-sm font-semibold text-gray-700">No readers here yet.</p>
+                  <p className="text-xs text-gray-500 mt-1">Share your invite link to start a reading circle.</p>
+                </div>
+              );
+            }
+
+            return [...visibleUsers].sort((a, b) => (b.totalChapters || 0) - (a.totalChapters || 0)).map((user, idx) => {
               const userProgress = (Math.round(getProgress(user.id) * 10) / 10).toFixed(1);
               const badgeLabel = getCommunityBadgeLabel(userProgress, user.completedDates?.length || 0);
               const isFirstToday = user.id === firstTodayUserId;
+              const todayReactions = communityReactions[today]?.[user.id] || {};
+              const amenCount = Object.keys(todayReactions.amen || {}).length;
+              const prayCount = Object.keys(todayReactions.pray || {}).length;
+              const keepGoingCount = Object.keys(todayReactions.keepGoing || {}).length;
               
               // Check if user completed today's scheduled reading (not just any reading today)
+              const userDayNumber = getDayNumberForPlan(now, user);
+              const userReading = getReadingForDay(userDayNumber);
+              const userChapterKeys = userReading.map(({ book, chapter }) => `${book} ${chapter}`);
               const userTodayChapters = user.completedChapters?.[today] || [];
-              const hasCompletedToday = todaysChapterKeys.every(ch => userTodayChapters.includes(ch));
+              const hasCompletedToday = userChapterKeys.every(ch => userTodayChapters.includes(ch));
               
               return (
                 <div key={user.id} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 border-2 border-purple-100">
@@ -3067,6 +3412,26 @@ function App() {
                     <span>🔥 {user.streak || 0} days</span>
                     <span>📖 {user.totalChapters || 0}/{TOTAL_CHAPTERS}</span>
                     <span>✅ {user.completedDates?.length || 0}/{TOTAL_DAYS}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    <button
+                      onClick={() => sendEncouragement(user.id, 'amen')}
+                      className="bg-white border border-purple-100 rounded-xl px-2 py-2 text-xs font-bold text-purple-700 flex items-center justify-center gap-1"
+                    >
+                      <Heart size={13} /> Amen {amenCount || ''}
+                    </button>
+                    <button
+                      onClick={() => sendEncouragement(user.id, 'pray')}
+                      className="bg-white border border-blue-100 rounded-xl px-2 py-2 text-xs font-bold text-blue-700 flex items-center justify-center gap-1"
+                    >
+                      <MessageCircle size={13} /> Pray {prayCount || ''}
+                    </button>
+                    <button
+                      onClick={() => sendEncouragement(user.id, 'keepGoing')}
+                      className="bg-white border border-green-100 rounded-xl px-2 py-2 text-xs font-bold text-green-700 flex items-center justify-center gap-1"
+                    >
+                      <Flame size={13} /> Go {keepGoingCount || ''}
+                    </button>
                   </div>
                 </div>
               );
@@ -3171,7 +3536,7 @@ function App() {
                         // Fix if days don't match OR streak is wrong
                         if (currentTotal > 0 && (expectedDays !== actualDays || currentStreak !== expectedDays)) {
                           const newCompletedDates = [];
-                          const startDate = new Date('2026-01-01');
+                          const startDate = new Date(`${GLOBAL_CHALLENGE_YEAR}-01-01`);
                           for (let i = 0; i < expectedDays; i++) {
                             const date = new Date(startDate);
                             date.setDate(startDate.getDate() + i);
@@ -3285,6 +3650,98 @@ function App() {
               Set your preferred daily reading time. You'll be reminded to complete your reading.
             </p>
           </div>
+
+          <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border-2 border-blue-100">
+            <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <Calendar size={16} />
+              Reading Plan
+            </label>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <button
+                onClick={() => setReadingPlanModeInput(DEFAULT_PLAN_MODE)}
+                className={`py-3 rounded-xl text-sm font-bold border-2 ${
+                  readingPlanModeInput === DEFAULT_PLAN_MODE
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-white text-purple-700 border-purple-100'
+                }`}
+              >
+                Global {GLOBAL_CHALLENGE_YEAR}
+              </button>
+              <button
+                onClick={() => setReadingPlanModeInput('custom')}
+                className={`py-3 rounded-xl text-sm font-bold border-2 ${
+                  readingPlanModeInput === 'custom'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-blue-700 border-blue-100'
+                }`}
+              >
+                Personal Start
+              </button>
+            </div>
+            {readingPlanModeInput === 'custom' && (
+              <div className="mb-3">
+                <input
+                  type="date"
+                  value={planStartDateInput}
+                  onChange={(e) => setPlanStartDateInput(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-blue-500 focus:outline-none text-lg"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Your plan runs for 365 days from this date. You can still use a private reading circle.
+                </p>
+              </div>
+            )}
+            <button
+              onClick={savePlanSettings}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-2xl font-semibold hover:from-blue-600 hover:to-purple-600 transition shadow"
+            >
+              Save Reading Plan
+            </button>
+          </div>
+
+          <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border-2 border-emerald-100">
+            <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <Users size={16} />
+              Reading Circle
+            </label>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={groupNameInput}
+                onChange={(e) => setGroupNameInput(e.target.value)}
+                placeholder="Circle name, e.g. Bethel Youth"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-emerald-500 focus:outline-none text-sm"
+              />
+              <input
+                type="text"
+                value={groupCodeInput}
+                onChange={(e) => setGroupCodeInput(e.target.value.toUpperCase())}
+                placeholder="Join code, or leave blank to create one"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-emerald-500 focus:outline-none text-sm"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={saveReadingCircle}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-2xl font-semibold hover:from-emerald-600 hover:to-teal-600 transition shadow text-sm"
+                >
+                  Save Circle
+                </button>
+                <button
+                  onClick={copyGroupInvite}
+                  className="bg-white text-emerald-700 border-2 border-emerald-100 py-3 rounded-2xl font-semibold hover:bg-emerald-50 transition shadow text-sm flex items-center justify-center gap-1"
+                >
+                  <Link size={15} />
+                  Invite
+                </button>
+              </div>
+              <button
+                onClick={leaveReadingCircle}
+                className="w-full text-xs text-gray-500 underline"
+              >
+                Return to global community only
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="p-4 bg-green-50 rounded-2xl">
@@ -3379,15 +3836,85 @@ function App() {
           </div>
         </div>
 
-        <div className="mb-6 p-4 bg-gray-100 rounded-2xl border-2 border-gray-200 opacity-50 cursor-not-allowed select-none">
-          <div className="w-full flex items-center justify-between mb-3 pointer-events-none">
-            <h3 className="text-sm font-bold text-gray-400 flex items-center gap-2">
+        <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200">
+          <button
+            onClick={() => setShowLogExtraReading(!showLogExtraReading)}
+            className="w-full flex items-center justify-between text-left mb-3"
+          >
+            <h3 className="text-sm font-bold text-green-800 flex items-center gap-2">
               <PlusCircle size={16} />
               Log Extra Reading
             </h3>
-            <span className="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded-full">🔒 Temporarily Disabled</span>
-          </div>
-          <p className="text-xs text-gray-400 italic">This feature is temporarily disabled.</p>
+            <span className="text-green-800 font-bold text-lg">{showLogExtraReading ? '▲' : '▼'}</span>
+          </button>
+          {showLogExtraReading && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-green-700 mb-3">
+                  Read more than the scheduled chapters today? Add them here so your progress reflects the extra effort.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="number"
+                    min="1"
+                    value={extraChaptersInput}
+                    onChange={(e) => setExtraChaptersInput(e.target.value)}
+                    placeholder="Number of extra chapters"
+                    className="flex-1 border-2 border-gray-300 rounded-2xl px-4 py-3 focus:border-purple-500 focus:outline-none"
+                  />
+                  <button
+                    onClick={logExtraChapters}
+                    disabled={!canLogExtra}
+                    className={`sm:w-auto w-full bg-gradient-to-r from-green-500 to-green-600 text-white px-5 py-3 rounded-2xl font-semibold transition shadow ${
+                      canLogExtra ? 'hover:from-green-600 hover:to-green-700' : 'opacity-60 cursor-not-allowed'
+                    }`}
+                  >
+                    Record Extra Chapters
+                  </button>
+                </div>
+                {!!currentUserData?.extraChapters && (
+                  <p className="text-sm text-gray-500 mt-3">
+                    You have logged <span className="font-semibold text-purple-600">{currentUserData.extraChapters}</span> bonus chapters so far.
+                  </p>
+                )}
+              </div>
+
+              {!!currentUserData?.extraChapters && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <Trash2 className="text-red-600" />
+                    Remove Extra Reading
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Made a mistake? Remove extra chapters you previously logged.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="number"
+                      min="1"
+                      max={currentUserData.extraChapters}
+                      value={removeExtraChaptersInput}
+                      onChange={(e) => setRemoveExtraChaptersInput(e.target.value)}
+                      placeholder="Number of chapters to remove"
+                      className="flex-1 border-2 border-gray-300 rounded-2xl px-4 py-3 focus:border-red-500 focus:outline-none"
+                    />
+                    <button
+                      onClick={removeExtraChapters}
+                      disabled={!canRemoveExtra}
+                      className={`sm:w-auto w-full bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-3 rounded-2xl font-semibold transition shadow ${
+                        canRemoveExtra ? 'hover:from-red-600 hover:to-red-700' : 'opacity-60 cursor-not-allowed'
+                      }`}
+                    >
+                      Remove Chapters
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    This will only remove from your bonus chapters count.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border-2 border-red-200">
